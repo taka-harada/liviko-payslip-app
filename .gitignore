@@ -1,0 +1,5 @@
+# clasp
+.clasp.json
+
+# dependancies
+/node_modules

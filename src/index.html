@@ -6,6 +6,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
   </head>
   <body>
+    <p>現在のページ: <?= currentPage ?></p>
+    <p>deployURL: <?= deployURL ?></p>
+    <a href="<?= deployURL ?>?page=upload">アップロード</a>
+    <a href="<?= deployURL ?>?page=convert">変換</a>
+    <a href="<?= deployURL ?>?page=login">ログイン</a>
     <div class="bg-white py-6 sm:py-8 lg:py-12">
       <div class="mx-auto max-w-screen-2xl px-4 md:px-8">
         <div>
@@ -75,45 +80,43 @@
         //.doSomething()
     }
 
-    function handleUpload(){
+    const handleUpload = () => {
       const form = document.getElementById('uploadFile')
-      google.script.run.withSuccessHandler(executeSuccess).withFailureHandler(executeFailer).uploadFile(form)
+      google.script.run.withSuccessHandler(displaySuccessLog).withFailureHandler(displayFailedLog).uploadFile(form)
       //disabledをtrueにしてクリックできない状態にした上でサーバーにデータ送信する
       // e.disabled = true
       // google.script.run.sendForm(this.parentNode)
     }
 
-    function executeSuccess(url) {
-      console.log("Success", url)
-      alert("成功しました\n" + url)
-    }
-    function executeFailer(e) {
-      console.log("Failer", e.message)
-      alert("失敗しました", e.message)
+    const handleCreateList = () => {
+      console.log("handleCreateListがコール")
+      // getFilesFromUploadsFolder()を実行して成功したらリストを作成します
+      google.script.run.withSuccessHandler(createList).getFilesFromUploadsFolder()
     }
 
-    // アップロードするファイルをセット
-    const setUploadFile = (e) => {
-      if((e.file[0]['type'].indexOf('csv') !== -1)) {
-        e.preventNode.parentNode.send.disabled = false
-      } else {
-        alert('適切なファイルをアップロードしてください。')
-        e.value = ''
-      }
-    }
-
-    function createList(items){
+    // getFilesFromUploadsFolder()成功時に実行されるリストDOM生成処理
+    const createList = (items) => {
       console.log("createListがコール", items)
-      try {
+
+      if(items.length === 0) {
+        // アイテムが空だったら
         const selectBoxArea = document.getElementById("selectBoxArea")
-        //ここでもう一個divを作成してselectと矢印用のdivと並列にする
+        selectBoxArea.classList.add('bg-red-100', 'border', 'border-red-400', 'text-red-700', 'px-4', 'py-3', 'rounded')
+
+        const paragraph = document.createElement('p')
+        paragraph.classList.add('font-bold')
+        paragraph.textContent = 'アップロードフォルダにはファイルがありません'
+
+        selectBoxArea.appendChild(paragraph)
+
+      } else {
+        try {
+        const selectBoxArea = document.getElementById("selectBoxArea")
         const selectBoxInner = document.createElement('div')
         selectBoxInner.classList.add('inline-block', 'relative', 'w-64')
 
         const selectBox = document.createElement('select')
-        //selectBox.createList.add("py-3 px-4 pe-9 block w-full border-gray-200 rounded-lg text-sm focus:border-blue-500 focus:ring-blue-500 disabled:opacity-50 disabled:pointer-events-none dark:bg-neutral-900 dark:border-neutral-700 dark:text-neutral-400 dark:placeholder-neutral-500 dark:focus:ring-neutral-600")
         selectBox.id = "uploadsFiles"
-        //selectBox.classList.add("flex w-full items-center justify-between rounded bg-white p-2 ring-1 ring-gray-300")
         selectBox.classList.add('block', 'appearance-none', 'w-full', 'bg-white', 'border', 'border-glay-400', 'hover:border-gray-500', 'px-4', 'py-2', 'pr-8', 'rounded', 'shadow', 'leading-tight', 'focus:outline-none', 'focus:shadow-outline')
 
         items.forEach(item => {
@@ -139,19 +142,6 @@
         selectBoxInner.appendChild(selectBox)
         selectBoxInner.appendChild(allowArea)
         selectBoxArea.appendChild(selectBoxInner)
-        //selectBoxArea.appendChild(selectBox)
-
-        // for(let item of items){
-        //   const selectbox = document.createElement("select")
-        //   select.name = "uploads"
-
-        //   const option = document.createElement("option")
-        //   option.value =
-        //   name.innerText = item.name
-        //   list.appendChild(name)
-
-        //   listArea.appendChild(list)
-        // }
 
         return "Success"
       } catch (error) {
@@ -159,9 +149,29 @@
       }
     }
 
-    function handleCreateList(){
-      console.log("handleCreateListがコール")
-      google.script.run.withSuccessHandler(createList).getFilesFromUploadsFolder()
+      }
+
+
+
+    // Google Script Runが成功したとき用のログ表示関数
+    const displaySuccessLog = (url) => {
+      console.log("Google Script Run Success", url)
+      alert("Google Script Runが成功しました\n" + url)
+    }
+    // Google Script Runが失敗したとき用のログ表示関数
+    const displayFailedLog = (e) => {
+      console.log("Google Script Run Failed", e.message)
+      alert("Google Script Runが失敗しました", e.message)
+    }
+
+    // アップロードするファイルをセット
+    const setUploadFile = (e) => {
+      if((e.file[0]['type'].indexOf('csv') !== -1)) {
+        e.preventNode.parentNode.send.disabled = false
+      } else {
+        alert('適切なファイルをアップロードしてください。')
+        e.value = ''
+      }
     }
 
 

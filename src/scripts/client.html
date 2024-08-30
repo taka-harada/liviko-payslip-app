@@ -1,0 +1,292 @@
+<script>
+
+//タブ切り替え
+const showTab = (tabId) => {
+  const tabContent = document.querySelectorAll('.tab-content')
+  tabContent.forEach((content) => {
+    content.classList.add('hidden')
+  })
+
+  const selectedTab = document.getElementById(tabId)
+  if(selectedTab) {
+    selectedTab.classList.remove('hidden')
+  }
+
+  const sideMenuButtons = document.querySelectorAll('.sidemenu-button')
+  sideMenuButtons.forEach((menu) => {
+    menu.classList.remove('bg-[#e7eef4]')
+  })
+
+  const clickedSideMenuButton = document.querySelector(`[onclick="showTab('${tabId}')"]`)
+  if(clickedSideMenuButton) {
+    clickedSideMenuButton.classList.add('bg-[#e7eef4]')
+  }
+}
+
+// SPメニュートグル
+const toggleMenu = () => {
+  console.log("メニュークリック")
+  const menuIcon = document.getElementById('sp-menu-icon')
+  menuIcon.classList.toggle('hidden')
+  const closeIcon = document.getElementById('sp-close-icon')
+  closeIcon.classList.toggle('hidden')
+
+  const menu = document.getElementById('sp-menu')
+  menu.classList.toggle('active')
+}
+
+const handleResize = () => {
+  console.log("handleResizeがコール")
+  const menu = document.getElementById('sp-menu')
+  const menuIcon = document.getElementById('sp-menu-icon')
+  const closeIcon = document.getElementById('sp-close-icon')
+
+  // MEMO 768pxといわずブラウザのサイズ変更されたらメニュー消す方向で
+  menu.classList.remove('active')
+  menuIcon.classList.remove('hidden')
+  closeIcon.classList.add('hidden')
+
+  // if(window.innerWidth >= 768) {
+  //   menu.classList.remove('active')
+  //   menuIcon.classList.remove('hidden')
+  //   closeIcon.classList.add('hidden')
+  // }
+}
+
+// 「ファイルアップロード」押下
+const handleUpload = () => {
+  //メッセージエリアを削除
+  removeMessageAreaDom()
+
+  const fileUploadForm = document.getElementById('uploadFile')
+  const fileInput = fileUploadForm.querySelector('input[type="file"]')
+  const uploadArea = document.getElementById('uploadArea')
+  const messageArea = document.getElementById('uploadStatusArea')
+
+  // ファイルが選択されていない場合
+  if(!fileInput.files.length) {
+    createMessageAreaDom(messageArea, 'ファイルを選択してください')
+    return
+    // messageArea.classList.add('bg-red-100', 'border', 'border-red-400', 'text-red-700', 'px-4', 'py-3', 'rounded')
+    // const paragraph = document.createElement('p')
+    // paragraph.classList.add('font-bold')
+    // paragraph.textContent = 'ファイルを選択してください。'
+    // messageArea.appendChild(paragraph)
+  } else {
+    const file = fileInput.files[0]
+    const allowedFormat = /(\.csv)$/i
+
+    // CSVファイル以外が選択された場合
+    if(!allowedFormat.exec(file.name)) {
+      createMessageAreaDom(messageArea, 'CSVファイルを選択してください')
+      return
+      // messageArea.classList.add('bg-red-100', 'border', 'border-red-400', 'text-red-700', 'px-4', 'py-3', 'rounded')
+      // const paragraph = document.createElement('p')
+      // paragraph.classList.add('font-bold')
+      // paragraph.textContent = 'CSVファイルを選択してください。'
+      // messageArea.appendChild(paragraph)
+    }
+
+    // 処理中メッセージ表示
+    //createMessageAreaDom(messageArea, '処理中...')
+    const loadingUpload = document.getElementById('loading-upload')
+    loadingUpload.classList.remove('hidden')
+
+    // ファイルアップロード実行
+    google.script.run.withSuccessHandler(execSuccess).withFailureHandler(execFailed).uploadFile(fileUploadForm)
+  }
+}
+
+// 「ファイル一覧を取得」押下
+const handleCreateList = () => {
+  // MEMO: サーバーサイド関数でitemが返ってきたらDOMを生成
+  google.script.run.withSuccessHandler(createListDom).getFilesFromUploadsFolder()
+}
+
+const createListDom = (items) => {
+  const selectBoxArea = document.getElementById("selectBoxArea")
+
+  if(items.length === 0) {
+    // アイテムが空だったら
+    createMessageAreaDom(selectBoxArea, 'アップロードフォルダにはファイルがありません')
+    // selectBoxArea.classList.add('bg-red-100', 'border', 'border-red-400', 'text-red-700', 'px-4', 'py-3', 'rounded')
+
+    // const paragraph = document.createElement('p')
+    // paragraph.classList.add('font-bold')
+    // paragraph.textContent = 'アップロードフォルダにはファイルがありません'
+
+    // selectBoxArea.appendChild(paragraph)
+  } else {
+
+    try {
+      // selectBoxAreaの子要素としてすでにselectBoxInnerがあれば削除する
+      const checkExistElm = selectBoxArea.querySelector("#selectBoxInner")
+      if(checkExistElm) selectBoxArea.removeChild(checkExistElm)
+
+      //ここでもう一個divを作成してselectと矢印用のdivと並列にする
+      const selectBoxInner = document.createElement('div')
+      selectBoxInner.id = "selectBoxInner"
+      selectBoxInner.classList.add('inline-block', 'relative', 'md:w-64', 'w-full')
+
+      const selectBox = document.createElement('select')
+      //selectBox.createList.add("py-3 px-4 pe-9 block w-full border-gray-200 rounded-lg text-sm focus:border-blue-500 focus:ring-blue-500 disabled:opacity-50 disabled:pointer-events-none dark:bg-neutral-900 dark:border-neutral-700 dark:text-neutral-400 dark:placeholder-neutral-500 dark:focus:ring-neutral-600")
+      selectBox.id = "uploadsFiles"
+      //selectBox.classList.add("flex w-full items-center justify-between rounded bg-white p-2 ring-1 ring-gray-300")
+      selectBox.classList.add('block', 'appearance-none', 'w-full', 'bg-white', 'border', 'border-glay-400', 'hover:border-gray-500', 'px-4', 'py-2', 'pr-8', 'rounded', 'shadow', 'leading-tight', 'focus:outline-none', 'focus:shadow-outline')
+
+      items.forEach(item => {
+        const option = document.createElement('option')
+        option.value = item.url
+        option.textContent = item.name
+        selectBox.appendChild(option)
+      })
+
+      const allowArea = document.createElement('div')
+      allowArea.classList.add('pointer-events-none', 'absolute', 'inset-y-0', 'right-0', 'flex' ,'items-center', 'px-2', 'text-gray-700')
+      const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg')
+      svg.classList.add('fill-current', 'h-4', 'w-4')
+      svg.setAttribute('xmlns', 'http://www.w3.org/2000/svg')
+      svg.setAttribute('viewBox', '0 0 20 20')
+
+      const path = document.createElementNS('http://www.w3.org/2000/svg', 'path')
+      path.setAttribute('d', 'M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z')
+
+      svg.appendChild(path)
+      allowArea.appendChild(svg)
+
+      selectBoxInner.appendChild(selectBox)
+      // MEMO: デフォのarrowが消えずにarrowが2重になるので一旦appendしない
+      //selectBoxInner.appendChild(allowArea)
+      selectBoxArea.appendChild(selectBoxInner)
+
+      //selectBoxArea.appendChild(selectBox)
+
+      // for(let item of items){
+      //   const selectbox = document.createElement("select")
+      //   select.name = "uploads"
+
+      //   const option = document.createElement("option")
+      //   option.value =
+      //   name.innerText = item.name
+      //   list.appendChild(name)
+
+      //   listArea.appendChild(list)
+      // }
+
+      return "Success"
+    } catch (error) {
+      return "Error: " + error.message
+    }
+  }
+}
+
+
+const submitSelectBox = () => {
+  const selectBox = document.getElementById("uploadsFiles")
+  const selectedValue = selectBox.value
+  console.log("選択された項目", selectedValue)
+
+  const urlParts = selectedValue.split('/')
+  console.log("urlParts", urlParts)
+  if(urlParts.length >= 5) {
+    const fileId = urlParts[5]
+    console.log("File ID:", fileId)
+    //execFunc(fileId)
+    // ステータスメッセージを表示
+    const loading = document.getElementById('loading-convert-pdf')
+    loading.classList.remove('hidden')
+    // const messageArea = document.getElementById('statusMessage')
+    // messageArea.innerText = '処理中...'
+
+    google.script.run
+      .withSuccessHandler((res) => {
+        loading.classList.add('hidden')
+        showToast('toast-success', 'PDF変換が成功しました')
+        console.log("サーバーからの応答をログに出力", res)
+      })
+      .withFailureHandler((res) => {
+        loading.classList.add('hidden')
+        showToast('toast-danger', 'PDF変換が失敗しました')
+        console.log("サーバーからの応答をログに出力（失敗）")
+      })
+      .convertSpreadSheetToPdf(fileId)
+
+  } else {
+    console.log("File ID not found in the URL.")
+  }
+}
+
+// google.run.scriptの成功or失敗時に実行
+const execSuccess = (url) => {
+  //メッセージエリアを削除
+  removeMessageAreaDom()
+
+  // loadingを消す
+  const loadingUpload = document.getElementById('loading-upload')
+  loadingUpload.classList.add('hidden')
+
+  //新しいメッセージエリアを生成
+  // const messageArea = document.getElementById('uploadStatusArea')
+  // createMessageAreaDom(messageArea, 'アップロードが成功しました')
+
+  // 成功トーストを表示
+  showToast('toast-success', 'アップロードが成功しました')
+
+  console.log("Success", url)
+  // alert("成功しました\n" + url)
+}
+
+const execFailed = (e) => {
+  //メッセージエリアを削除
+  removeMessageAreaDom()
+
+  // loadingを消す
+  const loadingUpload = document.getElementById('loading-upload')
+  loadingUpload.classList.add('hidden')
+
+  //新しいメッセージエリアを生成
+  // const messageArea = document.getElementById('uploadStatusArea')
+  // createMessageAreaDom(messageArea, 'アップロードが失敗しました')
+
+  // 失敗トーストを表示
+  showToast('toast-danger', 'アップロードが失敗しました')
+
+  console.log("Failed", e.message)
+  // alert("失敗しました", e.message)
+}
+
+// メッセージエリアを生成
+const createMessageAreaDom = (parentElement, text) => {
+  parentElement.classList.add('bg-red-100', 'border', 'border-red-400', 'text-red-700', 'px-4', 'py-3', 'rounded')
+  const paragraph = document.createElement('p')
+  paragraph.id = 'existMessage'
+  paragraph.classList.add('font-bold')
+  paragraph.textContent = text
+  parentElement.appendChild(paragraph)
+}
+
+// メッセージエリアを削除
+const removeMessageAreaDom = () => {
+  const uploadStatusArea = document.getElementById('uploadStatusArea')
+  uploadStatusArea.className = ''
+  const paragraphs = Array.from(uploadStatusArea.getElementsByTagName('p'))
+  paragraphs.forEach(p => p.remove())
+}
+
+// toastを表示
+const showToast = (toastId, message) => {
+  const toast = document.getElementById(toastId)
+  toast.classList.remove('hidden')
+  const toastMessageArea = document.getElementById('toast-message')
+  toastMessageArea.innerText = message
+
+  setTimeout(() => toast.classList.add('hidden'), 15000)
+}
+
+// toastを閉じる
+const closeToast = (toastId) => {
+  const toast = document.getElementById(toastId)
+  toast.classList.add('hidden')
+}
+
+</script>

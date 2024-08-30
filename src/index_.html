@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <base target="_top">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+  </head>
+  <body>
+    <p>現在のページ: <?= currentPage ?></p>
+    <p>deployURL: <?= deployURL ?></p>
+    <a href="<?= deployURL ?>?page=upload">アップロード</a>
+    <a href="<?= deployURL ?>?page=convert">変換</a>
+    <a href="<?= deployURL ?>?page=login">ログイン</a>
+    <div class="bg-white py-6 sm:py-8 lg:py-12">
+      <div class="mx-auto max-w-screen-2xl px-4 md:px-8">
+        <div>
+          <h2 class="my-8 text-center text-2xl font-bold text-gray-800 md:mb-8 lg:text-3xl flex flex-col"><?= email ?><?= name ?>さん</h2>
+          <p>こんにちは！</p>
+        </div>
+
+        <div id="uploadContainer" class="mx-auto max-w-lg">
+          <h2 class="my-8 text-center text-2xl font-bold text-gray-800 md:mb-8 lg:text-3xl flex flex-col">CSVデータのアップロード</h2>
+          <p class="flex justify-center items-center my-8">弥生会計からエクスポートしたCSVデータをGoogleドライブにアップロードします</p>
+          <form id="uploadFile" class="mx-auto max-w-lg rounded-lg">
+            <label class="text-base text-gray-500 font-semibold mb-2 block">Upload file</label>
+            <!-- <input type="file" name="file" class="block w-full text-sm text-gray-500 file:me-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-blue-600 file:text-white hover:file:bg-blue-700 file:disabled:opacity-50 file:disabled:pointer-events-none dark:text-neutral-500 dark:file:bg-blue-500 dark:hover:file:bg-blue-400"> -->
+            <input type="file" name="file" class="w-full text-gray-400 font-semibold text-sm bg-white border file:cursor-pointer cursor-pointer file:border-0 file:py-3 file:px-4 file:mr-4 file:bg-gray-100 file:hover:bg-gray-200 file:text-gray-500 rounded">
+          </form>
+          <button class="my-8 bg-gray-800 hover:bg-gray-700 text-white text-base font-bold py-2 px-4 inline-flex items-center" type="button" onclick="handleUpload()">ファイルをアップロードする</button>
+        </div>
+
+
+        <div id="convertArea" class="mx-auto max-w-lg">
+          <h2  class="my-8 text-center text-2xl font-bold text-gray-800 md:mb-8 lg:text-3xl flex flex-col">PDFを書き出す</h2>
+          <p class="flex justify-center items-center my-8">GoogleドライブにアップロードしたCSVファイルの一覧から、データを選択してPDFへ変換します</p>
+          <div id="selectBoxContainer">
+            <button type="button" onclick="handleCreateList()" class="my-8 bg-gray-800 hover:bg-gray-700 text-white text-base font-bold py-2 px-4 inline-flex items-center">ドライブのファイル一覧を取得</button>
+
+            <div id="selectBoxArea"></div>
+            <button type="button" onclick="submitSelectBox()" class="my-8 bg-gray-800 hover:bg-gray-700 text-white text-base font-bold py-2 px-4 inline-flex items-center">選択してPDF化を実行</button>
+
+            <div id="statusMessage"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </body>
+  <script type="text/javascript">
+    function submitSelectBox(){
+      const selectBox = document.getElementById("uploadsFiles")
+      const selectedValue = selectBox.value
+      console.log("選択された項目", selectedValue)
+
+      const urlParts = selectedValue.split('/')
+      console.log("urlParts", urlParts)
+      if(urlParts.length >= 5) {
+        const fileId = urlParts[5]
+        console.log("File ID:", fileId)
+        execFunc(fileId)
+      } else {
+        console.log("File ID not found in the URL.")
+      }
+
+    }
+    function execFunc(val) {
+      //google.script.run.withSuccessHandler(executeSuccess).withFailureHandler(executeFailer).doSomething()
+      document.getElementById('statusMessage').innerText = '処理中...'
+      console.log("フォーム側で実行時に渡された引数", val)
+      google.script.run
+        .withSuccessHandler((res) => {
+          document.getElementById('statusMessage').innerText = '処理完了'
+          console.log("サーバーからの応答をログに出力",res)
+        })
+        .withFailureHandler((res) => {
+          document.getElementById('statusMessage').innerText = '処理失敗'
+          console.log("サーバーからの応答をログに出力（失敗）", res)
+        })
+        .convertSpreadSheetToPdf(val)
+        //.doSomething()
+    }
+
+    const handleUpload = () => {
+      const form = document.getElementById('uploadFile')
+      google.script.run.withSuccessHandler(displaySuccessLog).withFailureHandler(displayFailedLog).uploadFile(form)
+      //disabledをtrueにしてクリックできない状態にした上でサーバーにデータ送信する
+      // e.disabled = true
+      // google.script.run.sendForm(this.parentNode)
+    }
+
+    const handleCreateList = () => {
+      console.log("handleCreateListがコール")
+      // getFilesFromUploadsFolder()を実行して成功したらリストを作成します
+      google.script.run.withSuccessHandler(createList).getFilesFromUploadsFolder()
+    }
+
+    // getFilesFromUploadsFolder()成功時に実行されるリストDOM生成処理
+    const createList = (items) => {
+      console.log("createListがコール", items)
+
+      if(items.length === 0) {
+        // アイテムが空だったら
+        const selectBoxArea = document.getElementById("selectBoxArea")
+        selectBoxArea.classList.add('bg-red-100', 'border', 'border-red-400', 'text-red-700', 'px-4', 'py-3', 'rounded')
+
+        const paragraph = document.createElement('p')
+        paragraph.classList.add('font-bold')
+        paragraph.textContent = 'アップロードフォルダにはファイルがありません'
+
+        selectBoxArea.appendChild(paragraph)
+
+      } else {
+        try {
+        const selectBoxArea = document.getElementById("selectBoxArea")
+        const selectBoxInner = document.createElement('div')
+        selectBoxInner.classList.add('inline-block', 'relative', 'w-64')
+
+        const selectBox = document.createElement('select')
+        selectBox.id = "uploadsFiles"
+        selectBox.classList.add('block', 'appearance-none', 'w-full', 'bg-white', 'border', 'border-glay-400', 'hover:border-gray-500', 'px-4', 'py-2', 'pr-8', 'rounded', 'shadow', 'leading-tight', 'focus:outline-none', 'focus:shadow-outline')
+
+        items.forEach(item => {
+          const option = document.createElement('option')
+          option.value = item.url
+          option.textContent = item.name
+          selectBox.appendChild(option)
+        })
+
+        const allowArea = document.createElement('div')
+        allowArea.classList.add('pointer-events-none', 'absolute', 'inset-y-0', 'right-0', 'flex' ,'items-center', 'px-2', 'text-gray-700')
+        const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg')
+        svg.classList.add('fill-current', 'h-4', 'w-4')
+        svg.setAttribute('xmlns', 'http://www.w3.org/2000/svg')
+        svg.setAttribute('viewBox', '0 0 20 20')
+
+        const path = document.createElementNS('http://www.w3.org/2000/svg', 'path')
+        path.setAttribute('d', 'M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z')
+
+        svg.appendChild(path)
+        allowArea.appendChild(svg)
+
+        selectBoxInner.appendChild(selectBox)
+        selectBoxInner.appendChild(allowArea)
+        selectBoxArea.appendChild(selectBoxInner)
+
+        return "Success"
+      } catch (error) {
+        return "Error: " + error.message
+      }
+    }
+
+      }
+
+
+
+    // Google Script Runが成功したとき用のログ表示関数
+    const displaySuccessLog = (url) => {
+      console.log("Google Script Run Success", url)
+      alert("Google Script Runが成功しました\n" + url)
+    }
+    // Google Script Runが失敗したとき用のログ表示関数
+    const displayFailedLog = (e) => {
+      console.log("Google Script Run Failed", e.message)
+      alert("Google Script Runが失敗しました", e.message)
+    }
+
+    // アップロードするファイルをセット
+    const setUploadFile = (e) => {
+      if((e.file[0]['type'].indexOf('csv') !== -1)) {
+        e.preventNode.parentNode.send.disabled = false
+      } else {
+        alert('適切なファイルをアップロードしてください。')
+        e.value = ''
+      }
+    }
+
+
+  </script>
+</html>

@@ -1,179 +1,403 @@
 <!DOCTYPE html>
 <html>
   <head>
-    <base target="_top">
-    <script src="https://cdn.tailwindcss.com"></script>
+    <title>CSVデータアップロード | Liviko 給与明細生成システム</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="preconnect" href="https://fonts.gstatic.com/" crossorigin="" />
+    <link
+      rel="stylesheet"
+      as="style"
+      onload="this.rel='stylesheet'"
+      href="https://fonts.googleapis.com/css2?display=swap&amp;family=Manrope%3Awght%40400%3B500%3B700%3B800&amp;family=Noto+Sans%3Awght%40400%3B500%3B700%3B900"
+    />
+    <link rel="icon" type="image/x-icon" href="data:image/x-icon;base64," />
+    <!-- MEMO: GASの場合、本番環境ではcss, js拡張子をhtmlとして読み込む必要がある。ローカル開発時は通常通りcss, js拡張子を使う必要があるので以下のコメントを解除して行う -->
+    <?!= loadExternalFile('src/css/style'); ?>
+    <?!= loadExternalFile('src/scripts/client'); ?>
+    <!-- <link rel="stylesheet" href="./css/style.css">
+    <script src="./scripts/client.js"></script> -->
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
   </head>
   <body>
-    <p>現在のページ: <?= currentPage ?></p>
-    <p>deployURL: <?= deployURL ?></p>
-    <a href="<?= deployURL ?>?page=upload">アップロード</a>
-    <a href="<?= deployURL ?>?page=convert">変換</a>
-    <a href="<?= deployURL ?>?page=login">ログイン</a>
-    <div class="bg-white py-6 sm:py-8 lg:py-12">
-      <div class="mx-auto max-w-screen-2xl px-4 md:px-8">
-        <div>
-          <h2 class="my-8 text-center text-2xl font-bold text-gray-800 md:mb-8 lg:text-3xl flex flex-col"><?= email ?><?= name ?>さん</h2>
-          <p>こんにちは！</p>
-        </div>
+    <div class="relative flex size-full min-h-screen flex-col bg-slate-50 group/design-root overflow-x-hidden" style='font-family: Manrope, "Noto Sans", sans-serif;'>
+      <div class="layout-container flex h-full grow flex-col">
 
-        <div id="uploadContainer" class="mx-auto max-w-lg">
-          <h2 class="my-8 text-center text-2xl font-bold text-gray-800 md:mb-8 lg:text-3xl flex flex-col">CSVデータのアップロード</h2>
-          <p class="flex justify-center items-center my-8">弥生会計からエクスポートしたCSVデータをGoogleドライブにアップロードします</p>
-          <form id="uploadFile" class="mx-auto max-w-lg rounded-lg">
-            <label class="text-base text-gray-500 font-semibold mb-2 block">Upload file</label>
-            <!-- <input type="file" name="file" class="block w-full text-sm text-gray-500 file:me-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-blue-600 file:text-white hover:file:bg-blue-700 file:disabled:opacity-50 file:disabled:pointer-events-none dark:text-neutral-500 dark:file:bg-blue-500 dark:hover:file:bg-blue-400"> -->
-            <input type="file" name="file" class="w-full text-gray-400 font-semibold text-sm bg-white border file:cursor-pointer cursor-pointer file:border-0 file:py-3 file:px-4 file:mr-4 file:bg-gray-100 file:hover:bg-gray-200 file:text-gray-500 rounded">
-          </form>
-          <button class="my-8 bg-gray-800 hover:bg-gray-700 text-white text-base font-bold py-2 px-4 inline-flex items-center" type="button" onclick="handleUpload()">ファイルをアップロードする</button>
-        </div>
-
-
-        <div id="convertArea" class="mx-auto max-w-lg">
-          <h2  class="my-8 text-center text-2xl font-bold text-gray-800 md:mb-8 lg:text-3xl flex flex-col">PDFを書き出す</h2>
-          <p class="flex justify-center items-center my-8">GoogleドライブにアップロードしたCSVファイルの一覧から、データを選択してPDFへ変換します</p>
-          <div id="selectBoxContainer">
-            <button type="button" onclick="handleCreateList()" class="my-8 bg-gray-800 hover:bg-gray-700 text-white text-base font-bold py-2 px-4 inline-flex items-center">ドライブのファイル一覧を取得</button>
-
-            <div id="selectBoxArea"></div>
-            <button type="button" onclick="submitSelectBox()" class="my-8 bg-gray-800 hover:bg-gray-700 text-white text-base font-bold py-2 px-4 inline-flex items-center">選択してPDF化を実行</button>
-
-            <div id="statusMessage"></div>
+        <!-- toast -->
+        <div id="toast-success" class="hidden absolute top-10 right-5 z-20 flex items-center w-full max-w-xs p-4 mb-4 text-gray-500 bg-white rounded-lg shadow" role="alert">
+          <div class="inline-flex items-center justify-center flex-shrink-0 w-8 h-8 text-green-500 bg-green-100 rounded-lg">
+            <svg class="w-5 h-5" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 20 20">
+              <path d="M10 .5a9.5 9.5 0 1 0 9.5 9.5A9.51 9.51 0 0 0 10 .5Zm3.707 8.207-4 4a1 1 0 0 1-1.414 0l-2-2a1 1 0 0 1 1.414-1.414L9 10.586l3.293-3.293a1 1 0 0 1 1.414 1.414Z"/>
+            </svg>
+            <span class="sr-only">Check icon</span>
           </div>
+          <div id="toast-message" class="ms-3 text-sm font-normal"></div>
+          <button type="button" onclick="closeToast('toast-success')" class="ms-auto -mx-1.5 -my-1.5 bg-white text-gray-400 hover:text-gray-900 rounded-lg focus:ring-2 focus:ring-gray-300 p-1.5 hover:bg-gray-100 inline-flex items-center justify-center h-8 w-8" data-dismiss-target="#toast-success" aria-label="Close">
+            <span class="sr-only">Close</span>
+            <svg class="w-3 h-3" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 14 14">
+              <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m1 1 6 6m0 0 6 6M7 7l6-6M7 7l-6 6"/>
+            </svg>
+          </button>
+        </div>
+
+        <div id="toast-danger" class="hidden absolute top-10 right-5 z-20 flex items-center w-full max-w-xs p-4 mb-4 text-gray-500 bg-white rounded-lg shadow" role="alert">
+          <div class="inline-flex items-center justify-center flex-shrink-0 w-8 h-8 text-red-500 bg-red-100 rounded-lg">
+            <svg class="w-5 h-5" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 20 20">
+              <path d="M10 .5a9.5 9.5 0 1 0 9.5 9.5A9.51 9.51 0 0 0 10 .5Zm3.707 11.793a1 1 0 1 1-1.414 1.414L10 11.414l-2.293 2.293a1 1 0 0 1-1.414-1.414L8.586 10 6.293 7.707a1 1 0 0 1 1.414-1.414L10 8.586l2.293-2.293a1 1 0 0 1 1.414 1.414L11.414 10l2.293 2.293Z"/>
+            </svg>
+            <span class="sr-only">Error icon</span>
+          </div>
+          <div id="toast-message" class="ms-3 text-sm font-normal">Item has been deleted.</div>
+          <button type="button" onclick="closeToast('toast-danger')" class="ms-auto -mx-1.5 -my-1.5 bg-white text-gray-400 hover:text-gray-900 rounded-lg focus:ring-2 focus:ring-gray-300 p-1.5 hover:bg-gray-100 inline-flex items-center justify-center h-8 w-8" data-dismiss-target="#toast-danger" aria-label="Close">
+            <span class="sr-only">Close</span>
+            <svg class="w-3 h-3" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 14 14">
+              <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m1 1 6 6m0 0 6 6M7 7l6-6M7 7l-6 6"/>
+            </svg>
+          </button>
+        </div>
+
+        <div id="toast-warning" class="hidden absolute top-10 right-5 z-20 flex items-center w-full max-w-xs p-4 text-gray-500 bg-white rounded-lg shadow" role="alert">
+          <div class="inline-flex items-center justify-center flex-shrink-0 w-8 h-8 text-orange-500 bg-orange-100 rounded-lg">
+            <svg class="w-5 h-5" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 20 20">
+              <path d="M10 .5a9.5 9.5 0 1 0 9.5 9.5A9.51 9.51 0 0 0 10 .5ZM10 15a1 1 0 1 1 0-2 1 1 0 0 1 0 2Zm1-4a1 1 0 0 1-2 0V6a1 1 0 0 1 2 0v5Z"/>
+            </svg>
+            <span class="sr-only">Warning icon</span>
+          </div>
+          <div id="toast-message" class="ms-3 text-sm font-normal">Improve password difficulty.</div>
+          <button type="button" onclick="closeToast('toast-warning')" class="ms-auto -mx-1.5 -my-1.5 bg-white text-gray-400 hover:text-gray-900 rounded-lg focus:ring-2 focus:ring-gray-300 p-1.5 hover:bg-gray-100 inline-flex items-center justify-center h-8 w-8 dark:text-gray-500" data-dismiss-target="#toast-warning" aria-label="Close">
+            <span class="sr-only">Close</span>
+            <svg class="w-3 h-3" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 14 14">
+              <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m1 1 6 6m0 0 6 6M7 7l6-6M7 7l-6 6"/>
+            </svg>
+          </button>
+        </div>
+        <!-- toast終わり -->
+
+        <!-- ヘッダー -->
+        <header class="flex flex-wrap md:flex-nowrap md:gap-8 items-center justify-between whitespace-nowrap border-b border-solid border-b-[#e7eef4] px-6 py-3">
+          <!-- ロゴエリア -->
+          <div class="flex items-center gap-4 text-[#0d151c] z-10">
+            <div class="block w-32 h-auto">
+              <img src="https://lh3.googleusercontent.com/d/1EOAeMr-GJuc0LW6P4_V3K2WBrW91rSlJ">
+            </div>
+
+            <!-- <div class="size-4">
+              <svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M6 6H42L36 24L42 42H6L12 24L6 6Z" fill="currentColor"></path></svg>
+            </div>
+            <h2 class="text-[#0d151c] text-lg font-bold leading-tight tracking-[-0.015em]">Payroll.io</h2> -->
+          </div>
+          <!-- ロゴエリア終わり -->
+
+          <div class="flex md:order-1 items-center justify-center gap-3">
+
+            <!-- ユーザーメニュー -->
+            <div class="group/dropdown flex flex-col gap-2 relative md:order-2">
+              <button type="button" id="dropdown-toggle" class="flex items-center w-full max-w-64 sm:max-w-72 gap-x-2 text-gray-600 hover:text-gray-400 font-medium">
+                <div class="flex h-12 w-12 items-center justify-center overflow-hidden rounded-full bg-[#f1f5f9]">
+                  <svg class="h-1/2 w-1/2 text-[#94a3b8]" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M7.5 6.5C7.5 8.981 9.519 11 12 11s4.5-2.019 4.5-4.5S14.481 2 12 2 7.5 4.019 7.5 6.5zM20 21h1v-1c0-3.859-3.141-7-7-7h-4c-3.86 0-7 3.141-7 7v1h1 1 14H20z"></path>
+                  </svg>
+                </div>
+                <!-- <img class="object-cover w-8 h-8 rounded-lg" src="https://images.unsplash.com/photo-1544005313-94ddf0286df2?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=faceare&facepad=3&w=688&h=688&q=100" alt=""> -->
+                <div class="text-left hidden md:block max-w-40 sm:max-w-52">
+                    <p class="text-base font-semibold text-gray-700 capitalize truncate"><?= name ?></p>
+                    <p class="text-xs text-gray-500 truncate"><?= email ?></p>
+                </div>
+                <svg class="ms-1 flex-shrink-0 size-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+              </button>
+
+              <div class="group-hover/dropdown:opacity-100 group-hover/dropdown:flex ml-auto absolute top-12 right-0 hidden opacity-0 z-10 bg-white sm:shadow-md sm:w-36 w-48 rounded-lg py-2 px-2">
+                <div class="flex flex-col w-full">
+                  <div class="text-left py-2 px-3 md:hidden border-b">
+                    <p class="text-base font-semibold text-gray-700 capitalize truncate"><?= name ?></p>
+                    <p class="text-xs text-gray-500 truncate"><?= email ?></p>
+                  </div>
+                  <a class="flex items-center gap-x-3.5 py-2 px-3 rounded-lg text-sm text-gray-800 hover:bg-gray-100 focus:ring-2 focus:ring-blue-500" href="#">
+                    About
+                  </a>
+                  <a class="flex items-center gap-x-3.5 py-2 px-3 rounded-lg text-sm text-gray-800 hover:bg-gray-100 focus:ring-2 focus:ring-blue-500" href="<?= deployURL ?>?page=login">
+                    ログアウト
+                  </a>
+                </div>
+              </div>
+            </div>
+            <!-- ユーザーメニュー終わり -->
+
+            <!-- SPメニュー -->
+            <button id="sp-menu-button" onclick="toggleMenu()" type="button" class="inline-flex items-center p-2 w-10 h-10 justify-center text-sm text-gray-500 rounded-lg md:hidden hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-gray-200 z-10" aria-controls="navbar-user" aria-expanded="false">
+              <span class="sr-only">Open main menu</span>
+              <svg id="sp-menu-icon" class="w-5 h-5" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 17 14">
+                <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M1 1h15M1 7h15M1 13h15"></path>
+              </svg>
+              <svg id="sp-close-icon" class="w-5 h-5 hidden" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 14 14">
+                <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m1 1 6 6m0 0 6 6M7 7l6-6M7 7l-6 6"/>
+              </svg>
+            </button>
+            <!-- SPメニュー -->
+
+          </div>
+
+          <!-- <ul id="sp-menu" class="flex flex-col w-full md:mt-0 mt-16 md:px-0 px-6 md:py-0 py-4 md:flex-row md:gap-9 border-t md:border-0">
+            <li><a class="py-2 px-3 w-full block text-[#0d151c] text-base md:text-sm font-bold md:font-medium leading-normal hover:bg-gray-200 hover:rounded-lg focus:ring-2 focus:ring-blue-500" href="https://docs.google.com/spreadsheets/d/1V4hVY45DmoE7FGl5S6X9y1cvXW0MmKjpXeka0TLuodA/edit?gid=0#gid=0" target="_blank">ユーザー管理</a></li>
+            <li><a class="py-2 px-3 w-full block text-[#0d151c] text-base md:text-sm font-bold md:font-medium leading-normal hover:bg-gray-200 hover:rounded-lg focus:ring-2 focus:ring-blue-500" href="https://docs.google.com/spreadsheets/d/1-4VMRGQ_LOkJ0VtCksrusJzi7OJ_7rRLG6nokPugHQU/edit?gid=0#gid=0" target="_blank">データ送付先管理</a></li>
+          </ul> -->
+
+          <div id="sp-menu" class="md:flex-1 md:justify-end gap-8 w-full md:flex md:w-auto sp-menu-area">
+            <ul class="flex flex-col w-full md:justify-end md:mt-0 mt-16 md:px-0 px-6 md:py-0 py-4 md:flex-row md:gap-9 border-t md:border-0">
+              <li><a class="py-2 px-3 w-full block text-[#0d151c] text-base md:text-sm font-bold md:font-medium leading-normal hover:bg-gray-200 hover:rounded-lg focus:ring-2 focus:ring-blue-500" href="https://docs.google.com/spreadsheets/d/1V4hVY45DmoE7FGl5S6X9y1cvXW0MmKjpXeka0TLuodA/edit?gid=0#gid=0" target="_blank">ユーザー管理</a></li>
+              <li><a class="py-2 px-3 w-full block text-[#0d151c] text-base md:text-sm font-bold md:font-medium leading-normal hover:bg-gray-200 hover:rounded-lg focus:ring-2 focus:ring-blue-500" href="https://docs.google.com/spreadsheets/d/1-4VMRGQ_LOkJ0VtCksrusJzi7OJ_7rRLG6nokPugHQU/edit?gid=0#gid=0" target="_blank">データ送付先管理</a></li>
+            </ul>
+          </div>
+          <!-- メニュー終わり -->
+
+          <!-- SPメニュー終わり -->
+
+        </header>
+        <!-- ヘッダー終わり -->
+
+        <!-- コンテナー -->
+        <div class="gap-1 px-6 flex flex-1 md:flex-row flex-col py-5">
+          <!-- サイドバー -->
+          <div class="layout-content-container flex flex-col md:w-80 w-full">
+            <div class="flex h-full md:min-h-[700px] flex-col justify-between bg-slate-50 md:p-4">
+              <div class="flex flex-col gap-4">
+                <h1 class="text-[#0d151c] text-base font-medium leading-normal">CSV Management</h1>
+                <div class="flex md:flex-col justify-center gap-2">
+                  <button class="sidemenu-button flex items-center gap-3 px-3 py-2 cursor-pointer rounded-xl bg-[#e7eef4] hover:bg-[#d4e0eb]" onclick="showTab('uploadArea')">
+                    <div class="text-[#0d151c]" data-icon="Upload" data-size="24px" data-weight="fill">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="24px" height="24px" fill="currentColor" viewBox="0 0 256 256">
+                        <path
+                          d="M74.34,77.66a8,8,0,0,1,0-11.32l48-48a8,8,0,0,1,11.32,0l48,48a8,8,0,0,1-11.32,11.32L136,43.31V128a8,8,0,0,1-16,0V43.31L85.66,77.66A8,8,0,0,1,74.34,77.66ZM240,136v64a16,16,0,0,1-16,16H32a16,16,0,0,1-16-16V136a16,16,0,0,1,16-16h68a4,4,0,0,1,4,4v3.46c0,13.45,11,24.79,24.46,24.54A24,24,0,0,0,152,128v-4a4,4,0,0,1,4-4h68A16,16,0,0,1,240,136Zm-40,32a12,12,0,1,0-12,12A12,12,0,0,0,200,168Z"
+                        ></path>
+                      </svg>
+                    </div>
+                    <p class="text-[#0d151c] text-sm font-medium leading-normal">CSVアップロード</p>
+                  </button>
+                  <button class="sidemenu-button flex items-center gap-3 px-3 py-2 rounded-xl hover:bg-[#d4e0eb] hover:rounded-xl" onclick="showTab('convertArea')">
+                    <div class="text-[#0d151c]" data-icon="Gear" data-size="24px" data-weight="regular">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="24px" height="24px" fill="currentColor" viewBox="0 0 256 256">
+                        <path
+                          d="M224,152a8,8,0,0,1-8,8H192v16h16a8,8,0,0,1,0,16H192v16a8,8,0,0,1-16,0V152a8,8,0,0,1,8-8h32A8,8,0,0,1,224,152ZM92,172a28,28,0,0,1-28,28H56v8a8,8,0,0,1-16,0V152a8,8,0,0,1,8-8H64A28,28,0,0,1,92,172Zm-16,0a12,12,0,0,0-12-12H56v24h8A12,12,0,0,0,76,172Zm88,8a36,36,0,0,1-36,36H112a8,8,0,0,1-8-8V152a8,8,0,0,1,8-8h16A36,36,0,0,1,164,180Zm-16,0a20,20,0,0,0-20-20h-8v40h8A20,20,0,0,0,148,180ZM40,112V40A16,16,0,0,1,56,24h96a8,8,0,0,1,5.66,2.34l56,56A8,8,0,0,1,216,88v24a8,8,0,0,1-16,0V96H152a8,8,0,0,1-8-8V40H56v72a8,8,0,0,1-16,0ZM160,80h28.69L160,51.31Z"
+                        ></path>
+                      </svg>
+                    </div>
+                    <p class="text-[#0d151c] text-sm font-medium cursor-pointer leading-normal">PDF書き出し</p>
+                  </button>
+                  <!-- <a class="flex items-center gap-3 px-3 py-2 cursor-pointer hover:bg-[#d4e0eb] hover:rounded-xl" href="https://drive.google.com/drive/folders/1CXwJtzuY5hsXXkGGXKOFtUswTpheME2a" target="_blank">
+                    <div class="text-[#0d151c]" data-icon="Download" data-size="24px" data-weight="regular">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="24px" height="24px" fill="currentColor" viewBox="0 0 256 256">
+                        <path
+                          d="M128,24C74.17,24,32,48.6,32,80v96c0,31.4,42.17,56,96,56s96-24.6,96-56V80C224,48.6,181.83,24,128,24Zm80,104c0,9.62-7.88,19.43-21.61,26.92C170.93,163.35,150.19,168,128,168s-42.93-4.65-58.39-13.08C55.88,147.43,48,137.62,48,128V111.36c17.06,15,46.23,24.64,80,24.64s62.94-9.68,80-24.64ZM69.61,53.08C85.07,44.65,105.81,40,128,40s42.93,4.65,58.39,13.08C200.12,60.57,208,70.38,208,80s-7.88,19.43-21.61,26.92C170.93,115.35,150.19,120,128,120s-42.93-4.65-58.39-13.08C55.88,99.43,48,89.62,48,80S55.88,60.57,69.61,53.08ZM186.39,202.92C170.93,211.35,150.19,216,128,216s-42.93-4.65-58.39-13.08C55.88,195.43,48,185.62,48,176V159.36c17.06,15,46.23,24.64,80,24.64s62.94-9.68,80-24.64V176C208,185.62,200.12,195.43,186.39,202.92Z"
+                        ></path>
+                      </svg>
+                    </div>
+                    <p class="text-[#0d151c] text-sm font-medium leading-normal">アップロードCSVデータ管理</p>
+                  </a>
+                  <div class="flex items-center gap-3 px-3 py-2 hover:bg-[#d4e0eb] hover:rounded-xl">
+                    <div class="text-[#0d151c]" data-icon="Gear" data-size="24px" data-weight="regular">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="24px" height="24px" fill="currentColor" viewBox="0 0 256 256">
+                        <path
+                          d="M128,80a48,48,0,1,0,48,48A48.05,48.05,0,0,0,128,80Zm0,80a32,32,0,1,1,32-32A32,32,0,0,1,128,160Zm88-29.84q.06-2.16,0-4.32l14.92-18.64a8,8,0,0,0,1.48-7.06,107.21,107.21,0,0,0-10.88-26.25,8,8,0,0,0-6-3.93l-23.72-2.64q-1.48-1.56-3-3L186,40.54a8,8,0,0,0-3.94-6,107.71,107.71,0,0,0-26.25-10.87,8,8,0,0,0-7.06,1.49L130.16,40Q128,40,125.84,40L107.2,25.11a8,8,0,0,0-7.06-1.48A107.6,107.6,0,0,0,73.89,34.51a8,8,0,0,0-3.93,6L67.32,64.27q-1.56,1.49-3,3L40.54,70a8,8,0,0,0-6,3.94,107.71,107.71,0,0,0-10.87,26.25,8,8,0,0,0,1.49,7.06L40,125.84Q40,128,40,130.16L25.11,148.8a8,8,0,0,0-1.48,7.06,107.21,107.21,0,0,0,10.88,26.25,8,8,0,0,0,6,3.93l23.72,2.64q1.49,1.56,3,3L70,215.46a8,8,0,0,0,3.94,6,107.71,107.71,0,0,0,26.25,10.87,8,8,0,0,0,7.06-1.49L125.84,216q2.16.06,4.32,0l18.64,14.92a8,8,0,0,0,7.06,1.48,107.21,107.21,0,0,0,26.25-10.88,8,8,0,0,0,3.93-6l2.64-23.72q1.56-1.48,3-3L215.46,186a8,8,0,0,0,6-3.94,107.71,107.71,0,0,0,10.87-26.25,8,8,0,0,0-1.49-7.06Zm-16.1-6.5a73.93,73.93,0,0,1,0,8.68,8,8,0,0,0,1.74,5.48l14.19,17.73a91.57,91.57,0,0,1-6.23,15L187,173.11a8,8,0,0,0-5.1,2.64,74.11,74.11,0,0,1-6.14,6.14,8,8,0,0,0-2.64,5.1l-2.51,22.58a91.32,91.32,0,0,1-15,6.23l-17.74-14.19a8,8,0,0,0-5-1.75h-.48a73.93,73.93,0,0,1-8.68,0,8,8,0,0,0-5.48,1.74L100.45,215.8a91.57,91.57,0,0,1-15-6.23L82.89,187a8,8,0,0,0-2.64-5.1,74.11,74.11,0,0,1-6.14-6.14,8,8,0,0,0-5.1-2.64L46.43,170.6a91.32,91.32,0,0,1-6.23-15l14.19-17.74a8,8,0,0,0,1.74-5.48,73.93,73.93,0,0,1,0-8.68,8,8,0,0,0-1.74-5.48L40.2,100.45a91.57,91.57,0,0,1,6.23-15L69,82.89a8,8,0,0,0,5.1-2.64,74.11,74.11,0,0,1,6.14-6.14A8,8,0,0,0,82.89,69L85.4,46.43a91.32,91.32,0,0,1,15-6.23l17.74,14.19a8,8,0,0,0,5.48,1.74,73.93,73.93,0,0,1,8.68,0,8,8,0,0,0,5.48-1.74L155.55,40.2a91.57,91.57,0,0,1,15,6.23L173.11,69a8,8,0,0,0,2.64,5.1,74.11,74.11,0,0,1,6.14,6.14,8,8,0,0,0,5.1,2.64l22.58,2.51a91.32,91.32,0,0,1,6.23,15l-14.19,17.74A8,8,0,0,0,199.87,123.66Z"
+                        ></path>
+                      </svg>
+                    </div>
+                    <p class="text-[#0d151c] text-sm font-medium cursor-pointer leading-normal">CSV Settings</p>
+                  </div> -->
+
+                </div>
+              </div>
+            </div>
+          </div>
+          <!-- サイドバー終わり -->
+
+          <!-- コンテンツエリア -->
+          <div class="layout-content-container flex flex-col max-w-[960px] flex-1">
+            <div id="uploadArea" class="tab-content px-4 py-3">
+              <div class="flex flex-wrap justify-between gap-3 py-4"><p class="text-[#0d151c] tracking-light text-[32px] font-bold leading-tight min-w-72">Import a new CSV</p></div>
+              <!-- <h1 class="text-[#0d151c] tracking-light text-[32px] font-bold leading-tight min-w-72">CSVデータのアップロード</h1> -->
+              <p class="text-[#0d151c] text-base font-normal leading-normal pb-3 pt-1">
+                「ファイルを選択」をクリックして新しいCSVファイルをアップロードしてください。<br>
+                ここからアップロードしたデータは、Googleドライブの「アップロードデータ」フォルダに格納されます。<br>
+                <span class="block text-sm pt-5">※本システムは弥生会計からエクスポートしたCSVデータに対応しています</span>
+              </p>
+
+              <!-- アップロードエリア -->
+              <div id="uploadArea" class="my-6 md:my-12">
+                <label class="text-base text-gray-500 font-semibold mb-2 block">Upload file</label>
+                <div class="flex lg:flex-row flex-col gap-6">
+                  <form id="uploadFile" class="mb-0 w-full lg:max-w-lg">
+                    <!-- <input type="file" name="file" class="block w-full text-sm text-gray-500 file:me-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-blue-600 file:text-white hover:file:bg-blue-700 file:disabled:opacity-50 file:disabled:pointer-events-none dark:text-neutral-500 dark:file:bg-blue-500 dark:hover:file:bg-blue-400"> -->
+                    <input type="file" name="file" class="w-full text-gray-400 font-semibold text-sm bg-white border file:cursor-pointer cursor-pointer file:border-0 file:py-3 file:px-4 file:mr-4 file:bg-gray-100 file:hover:bg-gray-200 file:text-gray-500 rounded">
+                  </form>
+                  <button class="bg-gray-800 hover:bg-gray-500 h-12 min-w-56 h-12 text-white text-sm align-center font-bold py-2 px-4 items-center rounded-xl" type="button" onclick="handleUpload()">ファイルをアップロードする</button>
+                </div>
+
+                <div id="loading-upload" aria-label="Loading..." role="status" class="flex items-center justify-center space-x-2 py-6 hidden">
+                  <svg class="h-16 w-16 animate-spin stroke-gray-500" viewBox="0 0 256 256">
+                      <line x1="128" y1="32" x2="128" y2="64" stroke-linecap="round" stroke-linejoin="round" stroke-width="24"></line>
+                      <line x1="195.9" y1="60.1" x2="173.3" y2="82.7" stroke-linecap="round" stroke-linejoin="round"
+                          stroke-width="24"></line>
+                      <line x1="224" y1="128" x2="192" y2="128" stroke-linecap="round" stroke-linejoin="round" stroke-width="24">
+                      </line>
+                      <line x1="195.9" y1="195.9" x2="173.3" y2="173.3" stroke-linecap="round" stroke-linejoin="round"
+                          stroke-width="24"></line>
+                      <line x1="128" y1="224" x2="128" y2="192" stroke-linecap="round" stroke-linejoin="round" stroke-width="24">
+                      </line>
+                      <line x1="60.1" y1="195.9" x2="82.7" y2="173.3" stroke-linecap="round" stroke-linejoin="round"
+                          stroke-width="24"></line>
+                      <line x1="32" y1="128" x2="64" y2="128" stroke-linecap="round" stroke-linejoin="round" stroke-width="24"></line>
+                      <line x1="60.1" y1="60.1" x2="82.7" y2="82.7" stroke-linecap="round" stroke-linejoin="round" stroke-width="24">
+                      </line>
+                  </svg>
+                  <span class="text-2xl font-medium text-gray-500 py-6">データアップロード中...</span>
+                </div>
+
+                <div id="uploadStatusArea"></div>
+              </div>
+
+              <!-- <div class="flex justify-stretch">
+                <div class="flex flex-1 gap-3 flex-wrap px-4 py-3 justify-start">
+                  <button
+                    class="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-xl h-10 px-4 bg-[#e7eef4] text-[#0d151c] text-sm font-bold leading-normal tracking-[0.015em]"
+                  >
+                    <span class="truncate">Upload new file</span>
+                  </button>
+                  <button
+                    class="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-xl h-10 px-4 bg-[#e7eef4] text-[#0d151c] text-sm font-bold leading-normal tracking-[0.015em]"
+                  >
+                    <span class="truncate">Download template</span>
+                  </button>
+                </div>
+              </div>
+              <h3 class="text-[#0d151c] text-lg font-bold leading-tight tracking-[-0.015em] px-4 pb-2 pt-4">Need help?</h3>
+              <p class="text-[#0d151c] text-base font-normal leading-normal pb-3 pt-1 px-4">See our article on importing data or reach out to our support team.</p> -->
+            </div>
+
+            <!-- PDF変換エリア -->
+            <div id="convertArea" class="tab-content px-4 py-3 hidden">
+              <div class="flex flex-wrap justify-between gap-3 py-4"><p class="text-[#0d151c] tracking-light text-[32px] font-bold leading-tight min-w-72">PDFを書き出す</p></div>
+              <!-- <h1 class="text-[#0d151c] tracking-light text-[32px] font-bold leading-tight min-w-72">CSVデータのアップロード</h1> -->
+
+              <h3 class="text-[#0d151c] text-lg font-bold leading-tight tracking-[-0.015em] px-4 pb-2 pt-4">Step 1: CSVファイルを選択</h3>
+              <p class="text-[#0d151c] text-base font-normal leading-normal pb-3 pt-1">
+                「ファイル一覧を取得」をクリックして、GoogleドライブにアップロードしたCSVファイルを選択してください。
+              </p>
+              <!-- ファイル選択エリア -->
+              <div class="my-4">
+                <div class="flex justify-between">
+                  <div id="selectBoxContainer" class="w-full">
+                    <button
+                      type="button"
+                      onclick="handleCreateList()"
+                      class="bg-gray-800 hover:bg-gray-500 h-12 w-full md:w-64 max-w-mb text-white text-sm font-bold py-2 px-4 items-center rounded-xl"
+                    >ファイル一覧を取得
+                    </button>
+                    <div id="selectBoxArea" class="my-4"></div>
+                  </div>
+
+                </div>
+              </div>
+
+              <h3 class="text-[#0d151c] text-lg font-bold leading-tight tracking-[-0.015em] px-4 pb-2 pt-4">Step 2: PDFファイルを書き出す</h3>
+              <p class="text-[#0d151c] text-base font-normal leading-normal pb-3 pt-1">
+                「PDF変換」をクリックすると、従業員の給与情報が反映されたPDFが生成され、それぞれ事前に設定したメールアドレスへファイルが送信されます。
+              </p>
+              <p class="text-sm py-4">※ 変換処理が完了するまで5分〜10分程度かかります。「PDF変換中」の表示ステータスが消えるまでお待ちください。</p>
+              <!-- PDF書き出しエリア -->
+              <div class="my-4">
+                <div class="flex flex-col justify-center w-full gap-10">
+                  <button
+                    type="button"
+                    onclick="submitSelectBox()"
+                    class="bg-gray-800 hover:bg-gray-500 h-12 w-full md:w-64 max-w-mb text-white text-sm font-bold py-2 px-4 items-center rounded-xl"
+                  >PDF変換
+                  </button>
+                  <div id="loading-convert-pdf" aria-label="Loading..." role="status" class="flex items-center justify-center space-x-2 hidden">
+                    <svg class="h-16 w-16 animate-spin stroke-gray-500" viewBox="0 0 256 256">
+                        <line x1="128" y1="32" x2="128" y2="64" stroke-linecap="round" stroke-linejoin="round" stroke-width="24"></line>
+                        <line x1="195.9" y1="60.1" x2="173.3" y2="82.7" stroke-linecap="round" stroke-linejoin="round"
+                            stroke-width="24"></line>
+                        <line x1="224" y1="128" x2="192" y2="128" stroke-linecap="round" stroke-linejoin="round" stroke-width="24">
+                        </line>
+                        <line x1="195.9" y1="195.9" x2="173.3" y2="173.3" stroke-linecap="round" stroke-linejoin="round"
+                            stroke-width="24"></line>
+                        <line x1="128" y1="224" x2="128" y2="192" stroke-linecap="round" stroke-linejoin="round" stroke-width="24">
+                        </line>
+                        <line x1="60.1" y1="195.9" x2="82.7" y2="173.3" stroke-linecap="round" stroke-linejoin="round"
+                            stroke-width="24"></line>
+                        <line x1="32" y1="128" x2="64" y2="128" stroke-linecap="round" stroke-linejoin="round" stroke-width="24"></line>
+                        <line x1="60.1" y1="60.1" x2="82.7" y2="82.7" stroke-linecap="round" stroke-linejoin="round" stroke-width="24">
+                        </line>
+                    </svg>
+                    <span class="text-2xl font-medium text-gray-500">PDF変換中...</span>
+                  </div>
+                  <div id="statusMessage"></div>
+                </div>
+              </div>
+            </div>
+            <!-- PDF変換エリア終わり -->
+
+          </div>
+          <!-- コンテンツエリア終わり -->
         </div>
       </div>
     </div>
 
   </body>
-  <script type="text/javascript">
-    function submitSelectBox(){
-      const selectBox = document.getElementById("uploadsFiles")
-      const selectedValue = selectBox.value
-      console.log("選択された項目", selectedValue)
 
-      const urlParts = selectedValue.split('/')
-      console.log("urlParts", urlParts)
-      if(urlParts.length >= 5) {
-        const fileId = urlParts[5]
-        console.log("File ID:", fileId)
-        execFunc(fileId)
-      } else {
-        console.log("File ID not found in the URL.")
-      }
+  <script>
+    // //タブ切り替え
+    // const showTab = (tabId) => {
+    //   const tabContent = document.querySelectorAll('.tab-content')
+    //   tabContent.forEach((content) => {
+    //     content.classList.add('hidden')
+    //   })
 
-    }
-    function execFunc(val) {
-      //google.script.run.withSuccessHandler(executeSuccess).withFailureHandler(executeFailer).doSomething()
-      document.getElementById('statusMessage').innerText = '処理中...'
-      console.log("フォーム側で実行時に渡された引数", val)
-      google.script.run
-        .withSuccessHandler((res) => {
-          document.getElementById('statusMessage').innerText = '処理完了'
-          console.log("サーバーからの応答をログに出力",res)
-        })
-        .withFailureHandler((res) => {
-          document.getElementById('statusMessage').innerText = '処理失敗'
-          console.log("サーバーからの応答をログに出力（失敗）", res)
-        })
-        .convertSpreadSheetToPdf(val)
-        //.doSomething()
-    }
+    //   const selectedTab = document.getElementById(tabId)
+    //   if(selectedTab) {
+    //     selectedTab.classList.remove('hidden')
+    //   }
 
-    const handleUpload = () => {
-      const form = document.getElementById('uploadFile')
-      google.script.run.withSuccessHandler(displaySuccessLog).withFailureHandler(displayFailedLog).uploadFile(form)
-      //disabledをtrueにしてクリックできない状態にした上でサーバーにデータ送信する
-      // e.disabled = true
-      // google.script.run.sendForm(this.parentNode)
-    }
+    //   const sideMenuButtons = document.querySelectorAll('.sidemenu-button')
+    //   sideMenuButtons.forEach((menu) => {
+    //     menu.classList.remove('bg-[#e7eef4]')
+    //   })
 
-    const handleCreateList = () => {
-      console.log("handleCreateListがコール")
-      // getFilesFromUploadsFolder()を実行して成功したらリストを作成します
-      google.script.run.withSuccessHandler(createList).getFilesFromUploadsFolder()
-    }
+    //   const clickedSideMenuButton = document.querySelector(`[onclick="showTab('${tabId}')"]`)
+    //   if(clickedSideMenuButton) {
+    //     clickedSideMenuButton.classList.add('bg-[#e7eef4]')
+    //   }
+    // }
 
-    // getFilesFromUploadsFolder()成功時に実行されるリストDOM生成処理
-    const createList = (items) => {
-      console.log("createListがコール", items)
+    // // SPメニュートグル
+    // const toggleMenu = () => {
+    //   console.log("メニュークリック")
+    //   const menuIcon = document.getElementById('sp-menu-icon')
+    //   menuIcon.classList.toggle('hidden')
+    //   const closeIcon = document.getElementById('sp-close-icon')
+    //   closeIcon.classList.toggle('hidden')
 
-      if(items.length === 0) {
-        // アイテムが空だったら
-        const selectBoxArea = document.getElementById("selectBoxArea")
-        selectBoxArea.classList.add('bg-red-100', 'border', 'border-red-400', 'text-red-700', 'px-4', 'py-3', 'rounded')
+    //   const menu = document.getElementById('sp-menu')
+    //   menu.classList.toggle('active')
+    // }
 
-        const paragraph = document.createElement('p')
-        paragraph.classList.add('font-bold')
-        paragraph.textContent = 'アップロードフォルダにはファイルがありません'
+    // const handleResize = () => {
+    //   const menu = document.getElementById('sp-menu')
+    //   const menuIcon = document.getElementById('sp-menu-icon')
+    //   const closeIcon = document.getElementById('sp-close-icon')
 
-        selectBoxArea.appendChild(paragraph)
+    //   // MEMO 768pxといわずブラウザのサイズ変更されたらメニュー消す方向で
+    //   menu.classList.remove('active')
+    //   menuIcon.classList.remove('hidden')
+    //   closeIcon.classList.add('hidden')
 
-      } else {
-        try {
-        const selectBoxArea = document.getElementById("selectBoxArea")
-        const selectBoxInner = document.createElement('div')
-        selectBoxInner.classList.add('inline-block', 'relative', 'w-64')
+    //   // if(window.innerWidth >= 768) {
+    //   //   menu.classList.remove('active')
+    //   //   menuIcon.classList.remove('hidden')
+    //   //   closeIcon.classList.add('hidden')
+    //   // }
+    // }
 
-        const selectBox = document.createElement('select')
-        selectBox.id = "uploadsFiles"
-        selectBox.classList.add('block', 'appearance-none', 'w-full', 'bg-white', 'border', 'border-glay-400', 'hover:border-gray-500', 'px-4', 'py-2', 'pr-8', 'rounded', 'shadow', 'leading-tight', 'focus:outline-none', 'focus:shadow-outline')
-
-        items.forEach(item => {
-          const option = document.createElement('option')
-          option.value = item.url
-          option.textContent = item.name
-          selectBox.appendChild(option)
-        })
-
-        const allowArea = document.createElement('div')
-        allowArea.classList.add('pointer-events-none', 'absolute', 'inset-y-0', 'right-0', 'flex' ,'items-center', 'px-2', 'text-gray-700')
-        const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg')
-        svg.classList.add('fill-current', 'h-4', 'w-4')
-        svg.setAttribute('xmlns', 'http://www.w3.org/2000/svg')
-        svg.setAttribute('viewBox', '0 0 20 20')
-
-        const path = document.createElementNS('http://www.w3.org/2000/svg', 'path')
-        path.setAttribute('d', 'M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z')
-
-        svg.appendChild(path)
-        allowArea.appendChild(svg)
-
-        selectBoxInner.appendChild(selectBox)
-        selectBoxInner.appendChild(allowArea)
-        selectBoxArea.appendChild(selectBoxInner)
-
-        return "Success"
-      } catch (error) {
-        return "Error: " + error.message
-      }
-    }
-
-      }
-
-
-
-    // Google Script Runが成功したとき用のログ表示関数
-    const displaySuccessLog = (url) => {
-      console.log("Google Script Run Success", url)
-      alert("Google Script Runが成功しました\n" + url)
-    }
-    // Google Script Runが失敗したとき用のログ表示関数
-    const displayFailedLog = (e) => {
-      console.log("Google Script Run Failed", e.message)
-      alert("Google Script Runが失敗しました", e.message)
-    }
-
-    // アップロードするファイルをセット
-    const setUploadFile = (e) => {
-      if((e.file[0]['type'].indexOf('csv') !== -1)) {
-        e.preventNode.parentNode.send.disabled = false
-      } else {
-        alert('適切なファイルをアップロードしてください。')
-        e.value = ''
-      }
-    }
-
+    window.addEventListener('resize', handleResize)
 
   </script>
 </html>

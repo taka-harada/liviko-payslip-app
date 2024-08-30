@@ -1,0 +1,47 @@
+<style>
+.sp-menu-area {
+  display: none;
+}
+
+.hide {
+  opacity: 0;
+  visibility: hidden;
+  transition: 1s;
+}
+
+.show {
+  transition: 1s;
+  opacity: 1;
+  visibility: visible;
+}
+
+@media screen and (max-width: 768px) {
+  .active {
+    display: block;
+    /* background-color: #60a5fa; */
+    background-color: #fff;
+    position: absolute;
+    top: 0;
+    left: 0;
+    height: 100svh;
+  }
+}
+
+@keyframes fadeIn {
+  0% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+@keyframes fadeOut {
+  0% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+</style>

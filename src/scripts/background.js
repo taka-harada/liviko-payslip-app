@@ -269,7 +269,14 @@ const createPersonalSsFromCsv = (fileId) => {
 
   // 項目名取得
   // とりあえず'社員コード'がある行を項目名の基準行にセットし、ジャンルごとに分けて取得
-  const itemCellRowNum = baseSheet.createTextFinder('社員コード').matchEntireCell(true).findNext().getRow()
+  let itemCellRowNum
+  const itemCell = baseSheet.createTextFinder('社員コード').matchEntireCell(true).findNext()
+  if (itemCell) {
+    itemCellRowNum = itemCell.getRow()
+  } else {
+    Logger.log("対象のセルが見つかりませんでした")
+  }
+  //const itemCellRowNum = baseSheet.createTextFinder('社員コード' | '行項目名').matchEntireCell(true).findNext().getRow()
   const amountPaidTitle = baseSheet.getRange(`C${itemCellRowNum}:U${itemCellRowNum}`).getValues()
   const deductionTitle_A = baseSheet.getRange(`AF${itemCellRowNum}:AI${itemCellRowNum}`).getValues()
   const deductionTitle_B = baseSheet.getRange(`AJ${itemCellRowNum}:AM${itemCellRowNum}`).getValues()
@@ -546,7 +553,7 @@ const createPersonalSsFromCsv = (fileId) => {
     SpreadsheetApp.flush()
 
     userSsIdArr.push({
-      name: data.name,
+      name: data.paymentBlock.name,
       date: documentDate,
       SsId: personalPaySlipSs.getId()
     })
@@ -560,7 +567,11 @@ const copyDataToSs = (fileId) => {
   const csvFile = DriveApp.getFileById(fileId)
 
   // CSVから値を取得
-  const csvContent = csvFile.getBlob().getDataAsString('UTF-8')
+  let csvContent = csvFile.getBlob().getDataAsString('UTF-8')
+  // '社員コード'という文字が含まれていない or 文字化けしている場合は Shift_JIS で再取得
+  if(!csvContent.includes('社員コード') || csvContent.includes('�')) {
+    csvContent = csvFile.getBlob().getDataAsString('Shift_JIS')
+  }
   const csvData = Utilities.parseCsv(csvContent)
 
   // 新規スプシを作成

@@ -7,8 +7,17 @@
  */
 const getSpecifiedColData = (sheet, positionName, itemName) => {
   // 役職名の入ってるセルを検索（役職名セルがない場合は項目名のあるセルを取得）
-  const targetNameCell = sheet.createTextFinder(positionName).matchEntireCell(true).findNext() || sheet.createTextFinder('社員コード').matchEntireCell(true).findNext()
-  const targetRowNum = targetNameCell.getRow()
+  let targetNameCell = sheet.createTextFinder(positionName).matchEntireCell(true).findNext()
+  if(!targetNameCell) {
+    targetNameCell = sheet.createTextFinder('社員コード').matchEntireCell(true).findNext()
+  }
+
+  let targetRowNum
+  if(targetNameCell) {
+    targetRowNum = targetNameCell.getRow()
+  } else {
+    Logger.log("targetNameCellが見つかりませんでした")
+  }
 
   let startRow = targetRowNum + 1 // 役職名のあるセルの次の行を開始行候補に設定
 

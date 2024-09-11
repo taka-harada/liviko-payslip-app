@@ -229,9 +229,9 @@ const convertSpreadSheetToPdf = (uploadedFileId) => {
       // MEMO: ここで名前とメールアドレスを記載したスプシを呼び出して名前とマッチしたテーブルのメールアドレスを取り出してsendMailする
       if(!targetUserInfo) {
         // 該当するユーザーの送信先情報が登録されていなければ管理者へ送信
-        sendMail('haradatakayuki7+admin@gmail.com', protectedPdfBlob)
+        sendMail('haradatakayuki7+admin@gmail.com', protectedPdfBlob, false, targetUserInfo)
       } else {
-        sendMail(`${targetUserInfo.mail}`, protectedPdfBlob)
+        sendMail(`${targetUserInfo.mail}`, protectedPdfBlob, true, targetUserInfo)
       }
 
       //Browser.msgBox(`PDFを出力しました`)
@@ -254,6 +254,11 @@ const createPersonalSsFromCsv = (fileId) => {
   const now = new Date()
   const date = formatDate(now)
   const dateFolder = personalPaySlipFolder.createFolder(date)
+
+  // 現在の西暦を取得
+  const currentYear = now.getFullYear()
+  // 現在の年号を和暦で取得
+  const currentJapanYear = getJapanEra(currentYear)
 
   // CSVの内容をスプシにコピーし、返却されたIDを取得
   const baseSsId = copyDataToSs(fileId)
@@ -493,7 +498,9 @@ const createPersonalSsFromCsv = (fileId) => {
     // 個別のスプシにデータを挿入
     const activeSs = SpreadsheetApp.open(personalPaySlipSs)
     const newSheet = activeSs.getSheets()[0]
+    newSheet.getRange(2, 2, 1, 1).setValue(`${currentJapanYear} ${now.getMonth() + 1}月分給与明細書`)
     newSheet.getRange(6, 4, 1, 1).setValue(data.paymentBlock.name) //氏名挿入
+    newSheet.getRange(6, 17, 1, 1).setValue(`支給日 ${currentJapanYear}${now.getMonth() + 1}月${now.getDate()}日`) //支給日挿入
 
     // amountPaidTitle, deductionTitle, otherTitleを縦に転置して個別スプシにデータを挿入
     const transposedAmountPaidTitle = amountPaidTitle[0].map((_, index) => [amountPaidTitle.map(row => row[index])])

@@ -1,5 +1,4 @@
 <script>
-
 //タブ切り替え
 const showTab = (tabId) => {
   const tabContent = document.querySelectorAll('.tab-content')
@@ -93,20 +92,43 @@ const handleUpload = () => {
     loadingUpload.classList.remove('hidden')
 
     // ファイルアップロード実行
-    google.script.run.withSuccessHandler(execSuccess).withFailureHandler(execFailed).uploadFile(fileUploadForm)
+    google.script.run.withSuccessHandler(handleUploadSuccess).withFailureHandler(handleUploadError).uploadFile(fileUploadForm)
   }
 }
 
-// 「ファイル一覧を取得」押下
-const handleCreateList = () => {
-  // MEMO: サーバーサイド関数でitemが返ってきたらDOMを生成
-  google.script.run.withSuccessHandler(createListDom).getFilesFromUploadsFolder()
+// PDF書き出しの「ファイル一覧を取得」押下
+const handleCreateList = (e) => {
+  // MEMO: サーバーサイド関数でitemが返ってきたらDOMを生成。イベントが発生したボタンのidでファイルを取得するフォルダを判別するので引数で送る
+  google.script.run.withSuccessHandler(createSelectBoxDom).getFilesFromSpecificFolder(e.target.id)
 }
 
-const createListDom = (items) => {
-  const selectBoxArea = document.getElementById("selectBoxArea")
+// 「ファイルを表示」押下 //MEMO: モーダルに表示させたい
+const handleCreateFileList = (e) => {
+  const selectElement = document.getElementById("generatedPdfFolders")
+  const selectedValue = selectElement.value
 
-  if(items.length === 0) {
+  // MEMO: URLを/folders/で分割して最後の配列の値をIDとして取り出す（URL構造が変わったら調整必要）
+  const folderId = selectedValue.split('/folders/')[1]
+
+  google.script.run.withSuccessHandler(createFileListDom).withFailureHandler(handleGetFileError).getFilesFromTargetPdfFolder(folderId)
+}
+
+/*
+* google.script.run成功時のメソッド
+*/
+// 特定フォルダ内のアイテムを取得してselectBoxを生成する
+const createSelectBoxDom = (items) => {
+  console.log("createListDomにitems入ってる？",items)
+  let selectBoxArea
+  if(items.id === 'getCsv') {
+    selectBoxArea = document.getElementById("selectBoxArea")
+  } else {
+    selectBoxArea = document.getElementById("selectBoxArea_B")
+  }
+  console.log(selectBoxArea)
+  //const selectBoxArea = document.getElementById("selectBoxArea")
+
+  if(items.data.length === 0) {
     // アイテムが空だったら
     createMessageAreaDom(selectBoxArea, 'アップロードフォルダにはファイルがありません')
     // selectBoxArea.classList.add('bg-red-100', 'border', 'border-red-400', 'text-red-700', 'px-4', 'py-3', 'rounded')
@@ -130,16 +152,24 @@ const createListDom = (items) => {
 
       const selectBox = document.createElement('select')
       //selectBox.createList.add("py-3 px-4 pe-9 block w-full border-gray-200 rounded-lg text-sm focus:border-blue-500 focus:ring-blue-500 disabled:opacity-50 disabled:pointer-events-none dark:bg-neutral-900 dark:border-neutral-700 dark:text-neutral-400 dark:placeholder-neutral-500 dark:focus:ring-neutral-600")
-      selectBox.id = "uploadsFiles"
+
+      if(items.id === 'getCsv') {
+        selectBox.id = "uploadsFiles"
+      } else {
+        selectBox.id = "generatedPdfFolders"
+      }
+
       //selectBox.classList.add("flex w-full items-center justify-between rounded bg-white p-2 ring-1 ring-gray-300")
       selectBox.classList.add('block', 'appearance-none', 'w-full', 'bg-white', 'border', 'border-glay-400', 'hover:border-gray-500', 'px-4', 'py-2', 'pr-8', 'rounded', 'shadow', 'leading-tight', 'focus:outline-none', 'focus:shadow-outline')
 
-      items.forEach(item => {
+      items.data.forEach(item => {
         const option = document.createElement('option')
         option.value = item.url
         option.textContent = item.name
         selectBox.appendChild(option)
       })
+
+      console.log("selectBoxにoption入ってる？",selectBox)
 
       const allowArea = document.createElement('div')
       allowArea.classList.add('pointer-events-none', 'absolute', 'inset-y-0', 'right-0', 'flex' ,'items-center', 'px-2', 'text-gray-700')
@@ -159,19 +189,42 @@ const createListDom = (items) => {
       //selectBoxInner.appendChild(allowArea)
       selectBoxArea.appendChild(selectBoxInner)
 
-      //selectBoxArea.appendChild(selectBox)
+      console.log("selectBoxAreaは？",selectBoxArea)
 
-      // for(let item of items){
-      //   const selectbox = document.createElement("select")
-      //   select.name = "uploads"
+      // MEMO: フォルダ内確認ボタン表示エリアを生成
+      const folderInnerConfirmBtnArea = document.getElementById('folderInnerConfirmBtnArea')
 
-      //   const option = document.createElement("option")
-      //   option.value =
-      //   name.innerText = item.name
-      //   list.appendChild(name)
+      // folderInnerConfirmBtnAreaの子要素としてすでにdivがあれば削除する
+      if(folderInnerConfirmBtnArea.querySelector('div')) {
+        while (folderInnerConfirmBtnArea.firstChild) {
+          folderInnerConfirmBtnArea.removeChild(folderInnerConfirmBtnArea.firstChild)
+        }
+      }
 
-      //   listArea.appendChild(list)
-      // }
+      const folderInnerConfirmBtnDom = `
+        <div class="py-4">
+          <p class="text-[#0d151c] text-base font-normal leading-normal pb-3 pt-1">選択したフォルダの中身を確認する場合は、「選択フォルダ内のフォルダを確認」をクリックしてください。</p>
+          <div class="flex justify-between">
+            <div id="selectBoxContainer" class="w-full">
+              <button
+                type="button"
+                onclick="handleCreateFileList(event)"
+                class="bg-gray-800 hover:bg-gray-500 h-12 w-full md:w-64 max-w-mb text-white text-sm font-bold py-2 px-4 items-center rounded-xl"
+                id="getPdfFiles"
+              >選択フォルダ内のファイルを確認
+              </button>
+              <div id="displayFileArea" class="my-4"></div>
+              <!-- モーダルボタンはコメントアウト <button
+                onclick="openModal()"
+                type="button"
+                class="py-3 px-4 inline-flex items-center gap-x-2 text-sm font-medium rounded-lg border border-transparent bg-blue-600 text-white hover:bg-blue-700 focus:outline-none focus:bg-blue-700 disabled:opacity-50 disabled:pointer-events-none"
+              >Open modal
+              </button> -->
+            </div>
+          </div>
+        </div>
+      `
+      folderInnerConfirmBtnArea.innerHTML = folderInnerConfirmBtnDom
 
       return "Success"
     } catch (error) {
@@ -180,44 +233,113 @@ const createListDom = (items) => {
   }
 }
 
+// handleCreateFileList成功時に実行される関数（モーダルエリアに取得したファイルを表示するDOMを生成してモーダルオープン）
+const createFileListDom = (items) => {
+  // フォルダ名を取得してモーダルのタイトルに入れる
+  const parentsFolderNameTitle = document.getElementById("parentsFolderName")
+  parentsFolderNameTitle.textContent = `${items.parentsFolderName}`
 
-const submitSelectBox = () => {
-  const selectBox = document.getElementById("uploadsFiles")
-  const selectedValue = selectBox.value
-  console.log("選択された項目", selectedValue)
-
-  const urlParts = selectedValue.split('/')
-  console.log("urlParts", urlParts)
-  if(urlParts.length >= 5) {
-    const fileId = urlParts[5]
-    console.log("File ID:", fileId)
-    //execFunc(fileId)
-    // ステータスメッセージを表示
-    const loading = document.getElementById('loading-convert-pdf')
-    loading.classList.remove('hidden')
-    // const messageArea = document.getElementById('statusMessage')
-    // messageArea.innerText = '処理中...'
-
-    google.script.run
-      .withSuccessHandler((res) => {
-        loading.classList.add('hidden')
-        showToast('toast-success', 'PDF変換が成功しました')
-        console.log("サーバーからの応答をログに出力", res)
-      })
-      .withFailureHandler((res) => {
-        loading.classList.add('hidden')
-        showToast('toast-danger', 'PDF変換が失敗しました')
-        console.log("サーバーからの応答をログに出力（失敗）")
-      })
-      .convertSpreadSheetToPdf(fileId)
-
+  if (items.data.length === 0) {
+    const selectFileArea = document.getElementById("displayFileArea")
+    createMessageAreaDom(selectFileArea, '選択したPDFフォルダにはファイルがありません')
   } else {
-    console.log("File ID not found in the URL.")
+
+    try {
+      const modalTableBody = document.getElementById('modalTableBody')
+
+      // tableの子要素としてすでにmodalTableBodyがあれば削除する
+      const checkExistElm = modalTableBody.querySelector('tr')
+      if(checkExistElm) {
+        while (modalTableBody.firstChild) {
+          modalTableBody.removeChild(modalTableBody.firstChild)
+        }
+      }
+
+      items.data.map(item => {
+        const modalTableTr = document.createElement('tr')
+        modalTableTr.innerHTML = `
+          <td class="px-2 sm:px-4 py-2 sm:py-4 text-sm font-medium text-gray-700 whitespace-nowrap">
+            <div class="flex items-center gap-x-2">
+              <div class="flex items-center justify-center w-[32px] w-8 h-8 text-blue-500 bg-blue-100 rounded-full">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z"></path>
+                </svg>
+              </div>
+
+              <div class="flex-1 whitespace-normal">
+                <h2 class="font-normal text-gray-800">${item.name}</h2>
+              </div>
+            </div>
+          </td>
+          <td class="px-2 sm:px-12 py-2 sm:py-4 text-sm font-normal text-gray-700 whitespace-nowrap">${item.size}</td>
+          <td class="hidden sm:block lg:block px-4 py-4 text-sm text-gray-500 whitespace-nowrap">${item.lastUpdated}</td>
+        `
+        modalTableBody.appendChild(modalTableTr)
+      })
+    } catch (e) {
+      console.error(e)
+    }
+
+    // DOMが生成された後にモーダルを開く
+    openModal()
   }
 }
 
-// google.run.scriptの成功or失敗時に実行
-const execSuccess = (url) => {
+
+// セレクトボックス選択中にボタン押下で実行する処理
+const submitSelectBox = (e) => {
+  console.log("submitSelectBox", e.target.id) //convertToPdfだったら、uploadsFilesのセレクトボックスの値を取得
+  if(e.target.id === 'convertToPdf') {
+    const selectBox = document.getElementById("uploadsFiles")
+    const selectedValue = selectBox.value
+    console.log("選択された項目", selectedValue)
+
+    const urlParts = selectedValue.split('/')
+    console.log("urlParts", urlParts)
+    if(urlParts.length >= 5) {
+      const fileId = urlParts[5]
+      console.log("File ID:", fileId)
+
+      // ステータスメッセージを表示
+      const loading = document.getElementById('loading-convert-pdf')
+      loading.classList.remove('hidden')
+      // const messageArea = document.getElementById('statusMessage')
+      // messageArea.innerText = '処理中...'
+
+      google.script.run
+        .withSuccessHandler((res) => {
+          loading.classList.add('hidden')
+          showToast('toast-success', 'PDF変換が成功しました')
+          console.log("サーバーからの応答をログに出力", res)
+        })
+        .withFailureHandler((res) => {
+          loading.classList.add('hidden')
+          showToast('toast-danger', 'PDF変換が失敗しました')
+          console.log("サーバーからの応答をログに出力（失敗）", res)
+        })
+        .convertSpreadSheetToPdf(fileId)
+
+    } else {
+      console.log("File ID not found in the URL.")
+    }
+
+  } else if(e.target.id === 'sendPdf') { // 「PDFメール送信」押下。sendPdfだったら、generatedPdfFoldersのセレクトボックスの値を取得
+    const selectBox = document.getElementById("generatedPdfFolders")
+    const selectedValue = selectBox.value
+
+    console.log("選択された値(sendPdf)",selectedValue)
+
+    // MEMO: URLを/folders/で分割して最後の配列の値をIDとして取り出す（URL構造が変わったら調整必要）
+    const folderId = selectedValue.split('/folders/')[1]
+    console.log("選択されたフォルダID", folderId)
+
+    google.script.run.sendPdfViaEmail(folderId)
+  } else {
+    console.log("すべて失敗")
+  }
+}
+
+const handleUploadSuccess = (url) => {
   //メッセージエリアを削除
   removeMessageAreaDom()
 
@@ -236,7 +358,12 @@ const execSuccess = (url) => {
   // alert("成功しました\n" + url)
 }
 
-const execFailed = (e) => {
+/*
+* google.script.run失敗時のメソッド
+*/
+
+// ファイルアップロードエラー
+const handleUploadError = (e) => {
   //メッセージエリアを削除
   removeMessageAreaDom()
 
@@ -254,6 +381,15 @@ const execFailed = (e) => {
   console.log("Failed", e.message)
   // alert("失敗しました", e.message)
 }
+
+// ファイル取得エラー
+const handleGetFileError = (e) => {
+
+  // 失敗トーストを表示
+  showToast('toast-danger', 'ファイルの取得が失敗しました')
+  console.log("getFilesFromTargetPdfFolderでエラー", e)
+}
+
 
 // メッセージエリアを生成
 const createMessageAreaDom = (parentElement, text) => {
@@ -287,6 +423,83 @@ const showToast = (toastId, message) => {
 const closeToast = (toastId) => {
   const toast = document.getElementById(toastId)
   toast.classList.add('hidden')
+}
+
+const openModal = () => {
+  const layer = document.getElementById("modalLayer")
+  const modal = document.getElementById("modalArea")
+
+  layer.classList.remove('z-[-1]', 'opacity-0', 'invisible')
+  layer.classList.add('z-[999]', 'opacity-100', 'visible')
+
+  modal.classList.remove('opacity-0', 'invisible')
+  modal.classList.add('opacity-100', 'visible')
+}
+
+const closeModal = (e) => {
+  console.log("イベントは？",e.currentTarget)
+  if (e.target.id === "modalLayer" || e.currentTarget.id === 'closeModal') {
+    modalLayer.classList.remove('z-[999]', 'opacity-100', 'visible')
+    modalLayer.classList.add('z-[-1]', 'opacity-0', 'invisible')
+  }
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+  const modalLayer = document.getElementById("modalLayer")
+  modalLayer.addEventListener('click', closeModal)
+})
+
+const startTimer = () => {
+  console.log("startTimerが実行")
+  // ユーザーが入力した時間を取得
+  const targetTime = new Date(document.getElementById("timeInput").value).getTime()
+
+  const selectBox = document.getElementById("uploadsFiles")
+  const selectedValue = selectBox.value
+  console.log("選択された項目", selectedValue)
+      const urlParts = selectedValue.split('/')
+  console.log("urlParts", urlParts)
+
+  // タイマーをセット
+  const timer = setInterval(() => {
+    const currentTime = new Date().getTime()
+
+    // 指定した時間になったらGASを実行
+    if (currentTime >= targetTime) {
+      clearInterval(timer) // タイマーを止める
+
+      console.log("指定時間に実行されました", currentTime, targetTime)
+      Logger.log("指定時間に実行されました", currentTime, targetTime)
+
+      // if(urlParts.length >= 5) {
+      //   const fileId = urlParts[5]
+      //   console.log("File ID:", fileId)
+      //   //execFunc(fileId)
+      //   // ステータスメッセージを表示
+      //   const loading = document.getElementById('loading-convert-pdf')
+      //   loading.classList.remove('hidden')
+      //   // const messageArea = document.getElementById('statusMessage')
+      //   // messageArea.innerText = '処理中...'
+
+      //   google.script.run
+      //     .withSuccessHandler((res) => {
+      //       loading.classList.add('hidden')
+      //       showToast('toast-success', 'PDF変換が成功しました')
+      //       console.log("サーバーからの応答をログに出力", res)
+      //     })
+      //     .withFailureHandler((res) => {
+      //       loading.classList.add('hidden')
+      //       showToast('toast-danger', 'PDF変換が失敗しました')
+      //       console.log("サーバーからの応答をログに出力（失敗）")
+      //     })
+      //     .convertSpreadSheetToPdf(fileId)
+
+      // } else {
+      //   console.log("File ID not found in the URL.")
+      // }
+
+    }
+  }, 1000)
 }
 
 </script>

@@ -145,21 +145,73 @@ const addUploadFileInfoToSs = ( values ) => {
 }
 
 // html側で「ファイル一覧を取得」押下時に実行される関数
-// 「アップロードデータ」フォルダのファイル一覧を取得
-const getFilesFromUploadsFolder = () => {
-  Logger.log("getFilesFromUploadsFolderがコール")
-  //フォルダ内のファイルを一括取得
-  const files = DriveApp.getFolderById(UPLOAD_FOLDER_ID).getFiles() //「アップロードデータ」フォルダ内の全ファイルを取得
+// フォルダ内のファイルを一括取得。
+const getFilesFromSpecificFolder = (buttonId) => {
+  Logger.log("getFilesFromSpecificFolderがコール。イベントが発生した箇所のIDを取得", buttonId)
+
+  // 取得する対象フォルダをbuttonに付与されているIDで判別。IDが'getCsv'だったら「アップロードデータ」フォルダ。それ以外は「PDF_パスワード付き」フォルダ
+  const targetFolderId = buttonId === 'getCsv' ? UPLOAD_FOLDER_ID : DIST_PROTECTED_PDF_FOLDER_ID
+  Logger.log(targetFolderId)
+  const files = DriveApp.getFolderById(targetFolderId).getFiles()
+  const folders = DriveApp.getFolderById(targetFolderId).getFolders()
+
   let fileArr = []
-  while(files.hasNext()) {
-    const file = files.next()
-    fileArr.push({
-      name: file.getName(),
-      version: file.getDescription(),
-      url: file.getUrl()
-    })
+  let folderArr = []
+
+  if(buttonId === 'getCsv') {
+    while(files.hasNext()) {
+      const file = files.next()
+      fileArr.push({
+        name: file.getName(),
+        version: file.getDescription(),
+        url: file.getUrl()
+      })
+    }
+    return {
+      data: fileArr,
+      id: buttonId
+    }
+  } else if(buttonId === 'getPdf') {
+    while(folders.hasNext()) {
+      const subfolder = folders.next()
+      console.log("フォルダのデータってどこまで取れてるの？",subfolder)
+      folderArr.push({
+        name: subfolder.getName(),
+        version: subfolder.getDescription(),
+        url: subfolder.getUrl()
+      })
+      console.log("folderArrの値",folderArr)
+    }
+    return {
+      data: folderArr,
+      id: buttonId
+    }
   }
-  return fileArr
+}
+
+// PDFフォルダ内のPDFファイルを取得する
+const getFilesFromTargetPdfFolder = (targetFolderId) => {
+
+  const targetFolder = DriveApp.getFolderById(targetFolderId)
+  const files = DriveApp.getFolderById(targetFolderId).getFiles()
+
+  let fileArr = []
+
+  try {
+    while(files.hasNext()) {
+      const file = files.next()
+      fileArr.push({
+        name: file.getName(),
+        size: Math.floor(file.getSize() / 1024) + 'KB',
+        lastUpdated: Utilities.formatDate(file.getLastUpdated(), Session.getScriptTimeZone(), "yyyy/MM/dd"),
+        url: file.getUrl()
+      })
+    }
+  } catch (error) {
+    Logger.log("Error occurred: " + error.message)
+    throw new Error('ファイルの取得中にエラーが発生しました。')
+  }
+  return { data: fileArr, parentsFolderName: targetFolder.getName() }
 }
 
 // html側で選択したファイルのIDを元にPDF生成を実行する
@@ -167,13 +219,24 @@ const convertSpreadSheetToPdf = (uploadedFileId) => {
 
   // ユーザーごとのスプシを生成して、[{ name: string, date: string, SsId: string  }] を返す
   const personalPaySlipSsDataArr = createPersonalSsFromCsv(uploadedFileId)
+  console.log("ユーザーごとのスプレッドシートデータが返ってきてるか",personalPaySlipSsDataArr)
 
-  // パスワード付与したPDFを格納するフォルダを「PDF_パスワード付き」フォルダ内に新規作成
-  const distProtectedPdfFolder = DriveApp.getFolderById(DIST_PROTECTED_PDF_FOLDER_ID)　// 「PDF_パスワード付き」フォルダ
+  // 生成したPDFを格納するフォルダ名を日時に指定するので現在の日時と時刻を取得
   const now = new Date()
   const date = formatDate(now)
-  const distFolder = distProtectedPdfFolder.createFolder(date)
-  const distFolderId = distFolder.getId()
+
+  // PDFを格納するフォルダを "エクスポート/個別データ/PDF"フォルダ内に実行時間のフォルダ名で新規作成
+  const distPdfFolder = DriveApp.getFolderById(DIST_PDF_FOLDER_ID)
+  const distPdfChildFolder = distPdfFolder.createFolder(date)
+  const distPdfChildFolderId = distPdfChildFolder.getId()
+
+  // パスワード付与したPDFを格納するフォルダを "エクスポート/個別データ/PDF_パスワード付き"フォルダ内に実行日時&時間のフォルダ名で新規作成
+  const distProtectedPdfFolder = DriveApp.getFolderById(DIST_PROTECTED_PDF_FOLDER_ID) // 「PDF_パスワード付き」フォルダ
+  const distProtectedPdfChildFolder = distProtectedPdfFolder.createFolder(date)
+  const distProtectedPdfChildFolderId = distProtectedPdfChildFolder.getId()
+
+  // const distFolder = distProtectedPdfFolder.createFolder(date)
+  // const distFolderId = distFolder.getId()
 
   // ユーザーの数だけループ処理でPDFを生成
   Object.keys(personalPaySlipSsDataArr).forEach(key => {
@@ -198,8 +261,13 @@ const convertSpreadSheetToPdf = (uploadedFileId) => {
       mail: item[1],
       password: item[2]
     }))
+
+    // MEMO: 一旦ここに記述するが、Util関数として外部化したい（氏名のスペースを削除する）
+    const normalizeString = (str) => str.replace(/[\s\u3000]+/g, '').trim()
     // 「データ送付先情報」スプシの中から対象ユーザーの情報を、給与明細スプシ生成の時に返却された氏名と比較して特定
-    const targetUserInfo = recipientInfo.find(info => info.name === personalPaySlipSsName)
+    const targetUserInfo = recipientInfo.find(info => normalizeString(info.name) === normalizeString(personalPaySlipSsName))
+    console.log("targetUserInfoを出力",targetUserInfo)
+    console.log("personalPaySlipSsNameの値は？",personalPaySlipSsName, normalizeString(personalPaySlipSsName))
 
     // PDF化
     try {
@@ -213,34 +281,100 @@ const convertSpreadSheetToPdf = (uploadedFileId) => {
       const fileName = personalPaySlipSsName + '_給与明細_' + documentDate + '.pdf'
       blob.setName(fileName.replace(/\s+/g, '')) //間のスペースなども正規表現で削除
 
+      // Memo: 通常のPDFも実行日時時間でフォルダを作成してそこに格納するようにしたので
       // 生成したPDFを格納するフォルダ
-      const distPdfFolderId = DIST_PDF_FOLDER_ID
+      //const distPdfFolderId = DIST_PDF_FOLDER_ID
 
       // パスワードなしPDF
-      const generatedPdfFile = DriveApp.getFolderById(distPdfFolderId).createFile(blob)
+      const generatedPdfFile = DriveApp.getFolderById(distPdfChildFolderId).createFile(blob)
+      // PDFにdescriptionを設定
+      generatedPdfFile.setDescription(personalPaySlipSsName)
 
       // ファイルを渡して、PDF.coからPre-signed URLとファイル名を取得
       const resObj = getPdfCoObj(generatedPdfFile)
 
-      // PDFにパスワードを設定
-      const oResp = addPasswordToPdf(resObj.url, resObj.fileName, targetUserInfo, distFolderId)
-      const protectedPdfBlob = oResp.generatedFile.getBlob()
+      // CSVの氏名と送信先情報スプレッドシートの氏名がマッチしてtargetUserInfo.passwordが存在すれば、PDFにパスワードセット
+      let protectedPdfBlob
+      if(targetUserInfo.password) {
+        // PDFにパスワードを設定
+        const oResp = addPasswordToPdf(resObj.url, resObj.fileName, targetUserInfo.password, distProtectedPdfChildFolderId)
+        protectedPdfBlob = oResp.generatedFile.getBlob()
+      } else {
+        // パスワード設定に失敗したログを出す
+        console.error("targetUserInfoにパスワードが設定されていないので、パスワード化が失敗しました。", targetUserInfo)
+      }
 
       // MEMO: ここで名前とメールアドレスを記載したスプシを呼び出して名前とマッチしたテーブルのメールアドレスを取り出してsendMailする
-      if(!targetUserInfo) {
+      if (targetUserInfo.mail) {
+        sendMail('haradatakayuki7+admin@gmail.com', protectedPdfBlob, true, targetUserInfo)
+        // sendMail(`${targetUserInfo.mail}`, protectedPdfBlob, true, targetUserInfo)
+      } else {
         // 該当するユーザーの送信先情報が登録されていなければ管理者へ送信
         sendMail('haradatakayuki7+admin@gmail.com', protectedPdfBlob, false, targetUserInfo)
-      } else {
-        sendMail(`${targetUserInfo.mail}`, protectedPdfBlob, true, targetUserInfo)
+        console.error("「データ送付先情報」スプシの情報は？", recipientInfo)
+        console.error("生成した個別スプシの名前情報は？", personalPaySlipSsName)
+        console.error("targetUserInfo.mailがundefinedだったため、メール送信に失敗しました。targetUserInfoを表示します。", targetUserInfo, )
       }
+      //sendMail(`${targetUserInfo.mail}`, protectedPdfBlob, true, targetUserInfo)
+      //sendMail('haradatakayuki7+admin@gmail.com', protectedPdfBlob, false, targetUserInfo)
+      // MEMO: ここで名前とメールアドレスを記載したスプシを呼び出して名前とマッチしたテーブルのメールアドレスを取り出してsendMailする
+      // if(!targetUserInfo) {
+      //   // 該当するユーザーの送信先情報が登録されていなければ管理者へ送信
+      //   sendMail('haradatakayuki7+admin@gmail.com', protectedPdfBlob, false, targetUserInfo)
+      //   console.error("「データ送付先情報」スプシの情報は？", recipientInfo)
+      //   console.error("生成した個別スプシの名前情報は？", personalPaySlipSsName)
+      //   console.error("targetUserInfoがundefinedだったため、メール送信に失敗しました。", targetUserInfo, )
+      // } else {
+      //   sendMail(`${targetUserInfo.mail}`, protectedPdfBlob, true, targetUserInfo)
+      // }
 
       //Browser.msgBox(`PDFを出力しました`)
     } catch(e) {
       //Browser.msgBox(`PDF出力に失敗しました\\n${e.message}`)
       console.error(`PDF出力に失敗しました\\n${e.message}`)
+      console.log("PDF出力に失敗しました", personalPaySlipSsDataArr)
     }
   })
+}
 
+// 選択したフォルダ内のファイルをユーザーのリストと照らし合わせてメール送信する
+const sendPdfViaEmail = (folderId) => {
+  // MEMO: ファイルが配列などで返ってくるわけではなく、FileIteratorオブジェクトが返ってくる
+  const allFiles = DriveApp.getFolderById(folderId).getFiles()
+
+  while (allFiles.hasNext()) {
+    const file = allFiles.next()
+    const fileName = file.getName()
+    const userName = fileName.substring(0, fileName.indexOf('_')) // ファイル名からユーザー名の部分を取り出す
+    const protectedPdfBlob = file.getBlob()
+
+    // メール送信先情報を定義
+    const recipientInfoSs = SpreadsheetApp.openById(RECIPIENT_INFO_SS_ID)
+    const recipientInfoSheet = recipientInfoSs.getActiveSheet()
+    const recipientInfoArr = recipientInfoSheet.getRange(2, 2, recipientInfoSheet.getLastRow(), recipientInfoSheet.getLastColumn()).getValues()
+    // 配列->オブジェクト
+    const recipientInfo = recipientInfoArr.map(item => ({
+      name: item[0],
+      mail: item[1],
+      password: item[2]
+    }))
+
+    // 「データ送付先情報」スプシの中から対象ユーザーの情報を、給与明細スプシ生成の時に返却された氏名と比較して特定
+    const targetUserInfo = recipientInfo.find(info => info.name === userName)
+
+    // MEMO:デバッグコード
+    console.log("targetUserInfoは？",targetUserInfo)
+
+    // MEMO: ここで名前とメールアドレスを記載したスプシを呼び出して名前とマッチしたテーブルのメールアドレスを取り出してsendMailする
+    if(!targetUserInfo) {
+      // 該当するユーザーの送信先情報が登録されていなければ管理者へ送信
+      sendMail('haradatakayuki7+admin@gmail.com', protectedPdfBlob, false, targetUserInfo)
+    } else {
+      // MEMO:デバッグコード
+      sendMail('haradatakayuki7+admin@gmail.com', protectedPdfBlob, true, targetUserInfo)
+      // sendMail(`${targetUserInfo.mail}`, protectedPdfBlob, true, targetUserInfo)
+    }
+  }
 }
 
 // CSVからユーザーごとのデータを抽出して個別スプシを作成する
@@ -561,7 +695,8 @@ const createPersonalSsFromCsv = (fileId) => {
 
     userSsIdArr.push({
       name: data.paymentBlock.name,
-      date: documentDate,
+      //date: documentDate, //CSV->スプシに記載の作成日
+      date: `${currentJapanYear}${now.getMonth() + 1}月${now.getDate()}日`, //実行した日
       SsId: personalPaySlipSs.getId()
     })
   })
@@ -614,16 +749,17 @@ const getPdfCoObj = (file) => {
 
   // PDF.coからPreSignedUrlをjsonで取得
   const resJson = useGetPreSignedUrl(file.getName())
-  console.log("respPresignedUrlからレスポンスきた？",resJson)
 
   if(!resJson.error){
-    console.log("エラーなくレスポンスが返ってきた")
+    console.log("PDF.coからエラーなくレスポンスが返ってきた")
     const fileBlob = file.getBlob()
     // URLとblobデータ
     if(usePutFileToPdfCo(resJson.presignedUrl, fileBlob)) {
       // Add Url
       return { url: resJson.url, fileName: file.getName() }
     }
+  } else {
+    console.error("PDF.coからレスポンスが返ってこなかった")
   }
 }
 
@@ -666,7 +802,7 @@ const usePutFileToPdfCo = (presignedUrl, fileContent) => {
 }
 
 // PDFにパスワードを設定
-const addPasswordToPdf = (pdfUrl, pdfFileName, userInfo, folderId) => {
+const addPasswordToPdf = (pdfUrl, pdfFileName, password, folderId) => {
 
   // Output File Name
   let outputFileName = `${pdfFileName.replace('.pdf','')}_protected.pdf`
@@ -674,8 +810,8 @@ const addPasswordToPdf = (pdfUrl, pdfFileName, userInfo, folderId) => {
   // Prepare Payload
   const data = {
     "url": pdfUrl,
-    "ownerPassword": userInfo ? `${userInfo.password}` : 'master',
-    "userPassword": userInfo ? `${userInfo.password}` : 'master',
+    "ownerPassword": `${password}`,
+    "userPassword": `${password}`,
     "EncryptionAlgorithm": "AES_128bit",
     "AllowPrintDocument": false,
     "AllowFillForms": false,
@@ -708,7 +844,7 @@ const addPasswordToPdf = (pdfUrl, pdfFileName, userInfo, folderId) => {
     const pdfCoRespJson = JSON.parse(pdfCoRespContent)
 
     if(!pdfCoRespJson.error) {
-      console.log("パスワード化がエラーなく完了")
+      console.log("パスワード化がエラーなく完了", outputFileName)
       const fileContent = UrlFetchApp.fetch(pdfCoRespJson.url).getBlob()
 
       // 生成したPDFを格納するフォルダ

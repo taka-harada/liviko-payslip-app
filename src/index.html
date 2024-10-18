@@ -182,17 +182,17 @@
                     </div>
                     <p class="text-[#0d151c] text-sm font-medium cursor-pointer leading-normal">PDF書き出し</p>
                   </button>
-                  <!-- <a class="flex items-center gap-3 px-3 py-2 cursor-pointer hover:bg-[#d4e0eb] hover:rounded-xl" href="https://drive.google.com/drive/folders/1CXwJtzuY5hsXXkGGXKOFtUswTpheME2a" target="_blank">
-                    <div class="text-[#0d151c]" data-icon="Download" data-size="24px" data-weight="regular">
-                      <svg xmlns="http://www.w3.org/2000/svg" width="24px" height="24px" fill="currentColor" viewBox="0 0 256 256">
-                        <path
-                          d="M128,24C74.17,24,32,48.6,32,80v96c0,31.4,42.17,56,96,56s96-24.6,96-56V80C224,48.6,181.83,24,128,24Zm80,104c0,9.62-7.88,19.43-21.61,26.92C170.93,163.35,150.19,168,128,168s-42.93-4.65-58.39-13.08C55.88,147.43,48,137.62,48,128V111.36c17.06,15,46.23,24.64,80,24.64s62.94-9.68,80-24.64ZM69.61,53.08C85.07,44.65,105.81,40,128,40s42.93,4.65,58.39,13.08C200.12,60.57,208,70.38,208,80s-7.88,19.43-21.61,26.92C170.93,115.35,150.19,120,128,120s-42.93-4.65-58.39-13.08C55.88,99.43,48,89.62,48,80S55.88,60.57,69.61,53.08ZM186.39,202.92C170.93,211.35,150.19,216,128,216s-42.93-4.65-58.39-13.08C55.88,195.43,48,185.62,48,176V159.36c17.06,15,46.23,24.64,80,24.64s62.94-9.68,80-24.64V176C208,185.62,200.12,195.43,186.39,202.92Z"
-                        ></path>
+                  <button class="sidemenu-button flex items-center gap-3 px-3 py-2 rounded-xl hover:bg-[#d4e0eb] hover:rounded-xl" onclick="showTab('sendArea')">
+                    <div class="text-[#0d151c]" data-icon="sendEmail" data-size="24px" data-weight="regular">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" style="fill: rgba(0, 0, 0, 1)">
+                        <path d="M20 4H6c-1.103 0-2 .897-2 2v5h2V8l6.4 4.8a1.001 1.001 0 0 0 1.2 0L20 8v9h-8v2h8c1.103 0 2-.897 2-2V6c0-1.103-.897-2-2-2zm-7 6.75L6.666 6h12.668L13 10.75z"></path>
+                        <path d="M2 12h7v2H2zm2 3h6v2H4zm3 3h4v2H7z"></path>
                       </svg>
                     </div>
-                    <p class="text-[#0d151c] text-sm font-medium leading-normal">アップロードCSVデータ管理</p>
-                  </a>
-                  <div class="flex items-center gap-3 px-3 py-2 hover:bg-[#d4e0eb] hover:rounded-xl">
+                    <p class="text-[#0d151c] text-sm font-medium cursor-pointer leading-normal">PDFメール送信</p>
+                  </button>
+
+                  <!-- <div class="flex items-center gap-3 px-3 py-2 hover:bg-[#d4e0eb] hover:rounded-xl">
                     <div class="text-[#0d151c]" data-icon="Gear" data-size="24px" data-weight="regular">
                       <svg xmlns="http://www.w3.org/2000/svg" width="24px" height="24px" fill="currentColor" viewBox="0 0 256 256">
                         <path
@@ -287,8 +287,9 @@
                   <div id="selectBoxContainer" class="w-full">
                     <button
                       type="button"
-                      onclick="handleCreateList()"
+                      onclick="handleCreateList(event)"
                       class="bg-gray-800 hover:bg-gray-500 h-12 w-full md:w-64 max-w-mb text-white text-sm font-bold py-2 px-4 items-center rounded-xl"
+                      id="getCsv"
                     >ファイル一覧を取得
                     </button>
                     <div id="selectBoxArea" class="my-4"></div>
@@ -298,6 +299,7 @@
               </div>
 
               <h3 class="text-[#0d151c] text-lg font-bold leading-tight tracking-[-0.015em] px-4 pb-2 pt-4">Step 2: PDFファイルを書き出す</h3>
+              <h4 class="text-sm font-bold px-4 pb-2 pt-4">すぐに書き出す</h4>
               <p class="text-[#0d151c] text-base font-normal leading-normal pb-3 pt-1">
                 「PDF変換」をクリックすると、従業員の給与情報が反映されたPDFが生成され、それぞれ事前に設定したメールアドレスへファイルが送信されます。
               </p>
@@ -307,8 +309,9 @@
                 <div class="flex flex-col justify-center w-full gap-10">
                   <button
                     type="button"
-                    onclick="submitSelectBox()"
+                    onclick="submitSelectBox(event)"
                     class="bg-gray-800 hover:bg-gray-500 h-12 w-full md:w-64 max-w-mb text-white text-sm font-bold py-2 px-4 items-center rounded-xl"
+                    id="convertToPdf"
                   >PDF変換
                   </button>
                   <div id="loading-convert-pdf" aria-label="Loading..." role="status" class="flex items-center justify-center space-x-2 hidden">
@@ -333,8 +336,230 @@
                   <div id="statusMessage"></div>
                 </div>
               </div>
+
+              <h4 class="text-sm font-bold px-4 pb-2 pt-4">【開発中】時間を指定して書き出す</h4>
+              <p class="text-[#0d151c] text-base font-normal leading-normal pb-3 pt-1">
+                CSVファイルを選択した状態で、ファイル書き出しをしたい時間を指定して「PDF変換の予約時間をセット」をクリックすると、指定の時間になったタイミングで従業員の給与情報が反映されたPDFが生成され、それぞれ事前に設定したメールアドレスへファイルが送信されます。
+              </p>
+              <!-- PDF書き出しエリア -->
+              <div class="my-4">
+                <div class="flex flex-col justify-center w-full gap-10">
+                  <input type="datetime-local" id="timeInput">
+                  <button
+                    type="button"
+                    onclick="startTimer()"
+                    class="bg-gray-800 hover:bg-gray-500 h-12 w-full md:w-64 max-w-mb text-white text-sm font-bold py-2 px-4 items-center rounded-xl"
+                  >PDF変換の予約時間をセット
+                  </button>
+                  <div id="loading-convert-pdf" aria-label="Loading..." role="status" class="flex items-center justify-center space-x-2 hidden">
+                    <svg class="h-16 w-16 animate-spin stroke-gray-500" viewBox="0 0 256 256">
+                        <line x1="128" y1="32" x2="128" y2="64" stroke-linecap="round" stroke-linejoin="round" stroke-width="24"></line>
+                        <line x1="195.9" y1="60.1" x2="173.3" y2="82.7" stroke-linecap="round" stroke-linejoin="round"
+                            stroke-width="24"></line>
+                        <line x1="224" y1="128" x2="192" y2="128" stroke-linecap="round" stroke-linejoin="round" stroke-width="24">
+                        </line>
+                        <line x1="195.9" y1="195.9" x2="173.3" y2="173.3" stroke-linecap="round" stroke-linejoin="round"
+                            stroke-width="24"></line>
+                        <line x1="128" y1="224" x2="128" y2="192" stroke-linecap="round" stroke-linejoin="round" stroke-width="24">
+                        </line>
+                        <line x1="60.1" y1="195.9" x2="82.7" y2="173.3" stroke-linecap="round" stroke-linejoin="round"
+                            stroke-width="24"></line>
+                        <line x1="32" y1="128" x2="64" y2="128" stroke-linecap="round" stroke-linejoin="round" stroke-width="24"></line>
+                        <line x1="60.1" y1="60.1" x2="82.7" y2="82.7" stroke-linecap="round" stroke-linejoin="round" stroke-width="24">
+                        </line>
+                    </svg>
+                    <span class="text-2xl font-medium text-gray-500">PDF変換中...</span>
+                  </div>
+                  <div id="statusMessage"></div>
+                </div>
+              </div>
+
             </div>
             <!-- PDF変換エリア終わり -->
+
+            <!-- PDFメール送信エリア -->
+            <div id="sendArea" class="tab-content px-4 py-3 hidden">
+              <div class="flex flex-wrap justify-between gap-3 py-4"><p class="text-[#0d151c] tracking-light text-[32px] font-bold leading-tight min-w-72">PDFをメールで送る</p></div>
+
+              <h3 class="text-[#0d151c] text-lg font-bold leading-tight tracking-[-0.015em] px-4 pb-2 pt-4">Step 1: PDFフォルダを選択</h3>
+              <p class="text-[#0d151c] text-base font-normal leading-normal pb-3 pt-1">「フォルダを取得」をクリックすると書き出されたPDFを格納しているフォルダがセレクトボックスから選択できるようになるので、メール送信したいPDFファイルが格納されている対象フォルダを選択してください。</p>
+              <!-- ファイル選択エリア -->
+              <div class="my-4 border-b border-gray-300">
+                <div class="flex justify-between">
+                  <div id="selectBoxContainer" class="w-full">
+                    <button
+                      type="button"
+                      onclick="handleCreateList(event)"
+                      class="bg-gray-800 hover:bg-gray-500 h-12 w-full md:w-64 max-w-mb text-white text-sm font-bold py-2 px-4 items-center rounded-xl"
+                      id="getPdf"
+                    >フォルダを取得
+                    </button>
+                    <div id="selectBoxArea_B" class="my-4"></div>
+                  </div>
+                </div>
+
+                <div id="folderInnerConfirmBtnArea">
+                  <!-- <div class="py-4">
+                    <p class="text-[#0d151c] text-base font-normal leading-normal pb-3 pt-1">選択したフォルダの中身を確認する場合は、「選択フォルダ内のフォルダを確認」をクリックしてください。</p>
+                    <div class="flex justify-between">
+                      <div id="selectBoxContainer" class="w-full">
+                        <button
+                          type="button"
+                          onclick="handleCreateFileList(event)"
+                          class="bg-gray-800 hover:bg-gray-500 h-12 w-full md:w-64 max-w-mb text-white text-sm font-bold py-2 px-4 items-center rounded-xl"
+                          id="getPdfFiles"
+                        >選択フォルダ内のファイルを確認
+                        </button>
+                        <div id="displayFileArea" class="my-4"></div>
+                      </div>
+                    </div>
+                  </div> -->
+                  <!-- MEMO: モーダルボタンはコメントアウト（ローカル開発時のみ使用）
+                  <button
+                    onclick="openModal()"
+                    type="button"
+                    class="py-3 px-4 inline-flex items-center gap-x-2 text-sm font-medium rounded-lg border border-transparent bg-blue-600 text-white hover:bg-blue-700 focus:outline-none focus:bg-blue-700 disabled:opacity-50 disabled:pointer-events-none"
+                  >Open modal
+                  </button> -->
+                </div>
+              </div>
+
+              <div id="modalLayer" class="fixed inset-0 bg-black bg-opacity-60 flex justify-center items-center z-[-1] opacity-0 invisible">
+                <div id="modalArea" class="relative bg-white shadow-lg rounded-lg mx-auto w-4/5 min-w-[340px] overflow-y-auto h-4/5 opacity-0 invisible">
+                  <div class="modal__inner relative h-full p-6">
+                    <!-- Modal header -->
+                    <div class="flex items-center justify-between p-4 md:p-5 border-b rounded-t">
+                      <div class="flex items-center gap-x-2">
+                        <div class="flex items-center justify-center w-[40px] w-10 h-10">
+                          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" stroke-width="2" width="30" height="30" color="#000000"><defs><style>.cls-6374f8d9b67f094e4896c634-1{fill:none;stroke:currentColor;stroke-miterlimit:10;}</style></defs><path class="cls-6374f8d9b67f094e4896c634-1" d="M19.67,21.59H4.37A2.87,2.87,0,0,1,1.5,18.72V3.41H9.15L12,7.24H22.54V18.72A2.87,2.87,0,0,1,19.67,21.59Z"></path><line class="cls-6374f8d9b67f094e4896c634-1" x1="12.02" y1="3.41" x2="23.5" y2="3.41"></line></svg>
+                        </div>
+                        <h3 id="parentsFolderName" class="text-xl font-semibold text-gray-900">フォルダが選択されていません！</h3>
+                      </div>
+                      <button id="closeModal" onclick="closeModal(event)" type="button" class="text-gray-400 bg-transparent hover:bg-gray-200 hover:text-gray-900 rounded-lg text-sm w-8 h-8 ms-auto inline-flex justify-center items-center" data-modal-hide="default-modal">
+                          <svg class="w-3 h-3" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 14 14">
+                              <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m1 1 6 6m0 0 6 6M7 7l6-6M7 7l-6 6"/>
+                          </svg>
+                          <span class="sr-only">Close modal</span>
+                      </button>
+                    </div>
+                    <div class="modal__contents pb-6">
+                      <div class="modal__content pt-4 pb-6">選択したフォルダ内のファイルを一覧表示しています。</div>
+                      <table class="w-full pb-6 divide-y divide-gray-200">
+                        <thead class="bg-gray-50">
+                          <tr>
+                            <th scope="col" class="py-2 sm:py-3.5 px-2 sm:px-4 text-sm font-normal text-left rtl:text-right text-gray-500">File name</th>
+                            <th scope="col" class="px-2 sm:px-12 py-2 sm:py-3.5 text-sm font-normal text-left rtl:text-right text-gray-500">File size</th>
+                            <th scope="col" class="hidden sm:block lg:block px-4 py-3.5 text-sm font-normal text-left rtl:text-right text-gray-500">Date uploaded</th>
+                          </tr>
+                        </thead>
+                        <tbody id="modalTableBody" class="bg-white divide-y divide-gray-200">
+                          <!-- appendでtr要素が挿入されるエリア -->
+                          <tr class="h-full">
+                            <td class="text-center text-2xl text-gray-300 py-4 h-96" colspan="100%">フォルダは空です</td>
+                          </tr>
+                          <tr>
+                            <td class="px-2 sm:px-4 py-2 sm:py-4 text-sm font-medium text-gray-700 whitespace-nowrap">
+                              <div class="inline-flex items-center gap-x-3">
+                                <input id="helper-radio-2" name="helper-radio" type="radio" value="" class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 focus:ring-blue-500 focus:ring-2">
+                                <div class="flex items-center gap-x-2">
+                                  <div class="flex items-center justify-center w-[32px] w-8 h-8 text-blue-500 bg-blue-100 rounded-full">
+                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5">
+                                      <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z"></path>
+                                    </svg>
+                                  </div>
+
+                                  <div class="flex-1 whitespace-normal">
+                                    <h2 class="font-normal text-gray-800">${item.name}</h2>
+                                  </div>
+                                </div>
+                              </div>
+                            </td>
+                            <td class="px-2 sm:px-12 py-2 sm:py-4 text-sm font-normal text-gray-700 whitespace-nowrap">${item.size}</td>
+                            <td class="hidden sm:block lg:block px-4 py-4 text-sm text-gray-500 whitespace-nowrap">${item.lastUpdated}</td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <h3 class="text-[#0d151c] text-lg font-bold leading-tight tracking-[-0.015em] px-4 pb-2 pt-4">Step 2: PDFファイルをメールで送る</h3>
+              <p class="text-[#0d151c] text-base font-normal leading-normal pb-3 pt-1">
+                「メール送信」をクリックすると、選択したフォルダ内のPDFファイルがそれぞれ事前に設定したメールアドレスへ送信されます。
+              </p>
+              <!-- PDF送信エリア -->
+              <div class="my-4">
+                <div class="flex flex-col justify-center w-full gap-10">
+                  <button
+                    type="button"
+                    onclick="submitSelectBox(event)"
+                    class="bg-gray-800 hover:bg-gray-500 h-12 w-full md:w-64 max-w-mb text-white text-sm font-bold py-2 px-4 items-center rounded-xl"
+                    id="sendPdf"
+                  >PDFメール送信
+                  </button>
+                  <div id="loading-convert-pdf" aria-label="Loading..." role="status" class="flex items-center justify-center space-x-2 hidden">
+                    <svg class="h-16 w-16 animate-spin stroke-gray-500" viewBox="0 0 256 256">
+                        <line x1="128" y1="32" x2="128" y2="64" stroke-linecap="round" stroke-linejoin="round" stroke-width="24"></line>
+                        <line x1="195.9" y1="60.1" x2="173.3" y2="82.7" stroke-linecap="round" stroke-linejoin="round"
+                            stroke-width="24"></line>
+                        <line x1="224" y1="128" x2="192" y2="128" stroke-linecap="round" stroke-linejoin="round" stroke-width="24">
+                        </line>
+                        <line x1="195.9" y1="195.9" x2="173.3" y2="173.3" stroke-linecap="round" stroke-linejoin="round"
+                            stroke-width="24"></line>
+                        <line x1="128" y1="224" x2="128" y2="192" stroke-linecap="round" stroke-linejoin="round" stroke-width="24">
+                        </line>
+                        <line x1="60.1" y1="195.9" x2="82.7" y2="173.3" stroke-linecap="round" stroke-linejoin="round"
+                            stroke-width="24"></line>
+                        <line x1="32" y1="128" x2="64" y2="128" stroke-linecap="round" stroke-linejoin="round" stroke-width="24"></line>
+                        <line x1="60.1" y1="60.1" x2="82.7" y2="82.7" stroke-linecap="round" stroke-linejoin="round" stroke-width="24">
+                        </line>
+                    </svg>
+                    <span class="text-2xl font-medium text-gray-500">PDFをメール送信中...</span>
+                  </div>
+                  <div id="statusMessage"></div>
+                </div>
+              </div>
+
+              <h4 class="text-sm font-bold px-4 pb-2 pt-4">【開発中】時間を指定してメールを送る</h4>
+              <p class="text-[#0d151c] text-base font-normal leading-normal pb-3 pt-1">
+                メール送信対象のPDFフォルダを選択した状態で、メール送信をしたい時間を指定して「PDFメール送信の予約時間をセット」をクリックすると、指定の時間になったタイミングでそれぞれ事前に設定したメールアドレスへPDFファイルが送信されます。
+              </p>
+              <!-- PDF送信エリア -->
+              <div class="my-4">
+                <div class="flex flex-col justify-center w-full gap-10">
+                  <input type="datetime-local" id="timeInput">
+                  <button
+                    type="button"
+                    onclick="startTimer()"
+                    class="bg-gray-800 hover:bg-gray-500 h-12 w-full md:w-64 max-w-mb text-white text-sm font-bold py-2 px-4 items-center rounded-xl"
+                  >PDFメール送信の予約時間をセット
+                  </button>
+                  <div id="loading-convert-pdf" aria-label="Loading..." role="status" class="flex items-center justify-center space-x-2 hidden">
+                    <svg class="h-16 w-16 animate-spin stroke-gray-500" viewBox="0 0 256 256">
+                        <line x1="128" y1="32" x2="128" y2="64" stroke-linecap="round" stroke-linejoin="round" stroke-width="24"></line>
+                        <line x1="195.9" y1="60.1" x2="173.3" y2="82.7" stroke-linecap="round" stroke-linejoin="round"
+                            stroke-width="24"></line>
+                        <line x1="224" y1="128" x2="192" y2="128" stroke-linecap="round" stroke-linejoin="round" stroke-width="24">
+                        </line>
+                        <line x1="195.9" y1="195.9" x2="173.3" y2="173.3" stroke-linecap="round" stroke-linejoin="round"
+                            stroke-width="24"></line>
+                        <line x1="128" y1="224" x2="128" y2="192" stroke-linecap="round" stroke-linejoin="round" stroke-width="24">
+                        </line>
+                        <line x1="60.1" y1="195.9" x2="82.7" y2="173.3" stroke-linecap="round" stroke-linejoin="round"
+                            stroke-width="24"></line>
+                        <line x1="32" y1="128" x2="64" y2="128" stroke-linecap="round" stroke-linejoin="round" stroke-width="24"></line>
+                        <line x1="60.1" y1="60.1" x2="82.7" y2="82.7" stroke-linecap="round" stroke-linejoin="round" stroke-width="24">
+                        </line>
+                    </svg>
+                    <span class="text-2xl font-medium text-gray-500">PDFメール送信中...</span>
+                  </div>
+                  <div id="statusMessage"></div>
+                </div>
+              </div>
+
+            </div>
+            <!-- PDFメール送信エリア終わり -->
 
           </div>
           <!-- コンテンツエリア終わり -->

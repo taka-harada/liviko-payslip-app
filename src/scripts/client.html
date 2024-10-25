@@ -66,11 +66,6 @@ const handleUpload = () => {
   if(!fileInput.files.length) {
     createMessageAreaDom(messageArea, 'ファイルを選択してください')
     return
-    // messageArea.classList.add('bg-red-100', 'border', 'border-red-400', 'text-red-700', 'px-4', 'py-3', 'rounded')
-    // const paragraph = document.createElement('p')
-    // paragraph.classList.add('font-bold')
-    // paragraph.textContent = 'ファイルを選択してください。'
-    // messageArea.appendChild(paragraph)
   } else {
     const file = fileInput.files[0]
     const allowedFormat = /(\.csv)$/i
@@ -79,11 +74,6 @@ const handleUpload = () => {
     if(!allowedFormat.exec(file.name)) {
       createMessageAreaDom(messageArea, 'CSVファイルを選択してください')
       return
-      // messageArea.classList.add('bg-red-100', 'border', 'border-red-400', 'text-red-700', 'px-4', 'py-3', 'rounded')
-      // const paragraph = document.createElement('p')
-      // paragraph.classList.add('font-bold')
-      // paragraph.textContent = 'CSVファイルを選択してください。'
-      // messageArea.appendChild(paragraph)
     }
 
     // 処理中メッセージ表示
@@ -91,8 +81,35 @@ const handleUpload = () => {
     const loadingUpload = document.getElementById('loading-upload')
     loadingUpload.classList.remove('hidden')
 
-    // ファイルアップロード実行
-    google.script.run.withSuccessHandler(handleUploadSuccess).withFailureHandler(handleUploadError).uploadFile(fileUploadForm)
+    // Encoding.jsを使ってShift-JISをUTF-8へエンコード
+    const reader = new FileReader()
+    reader.onload = (e) => {
+      const arrayBuffer = e.target.result
+      const uint8Array = new Uint8Array(arrayBuffer)
+
+      // エンコーディングを検出
+      const detected = jschardet.detect(uint8Array)
+
+      let utf8Array
+      // Shift_JISだったらUTF-8にエンコード
+      if(detected.encoding.toLowerCase() === 'shift_jis') {
+        utf8Array = Encoding.convert(uint8Array, {to: 'UNICODE', from: 'SJIS', type: 'arraybuffer'})
+      } else {
+      // MEMO:それ以外（UTF-8はもちろんASCIIとか）は一旦そのまま。もっと広くこのアプリを展開するようになったら厳密に指定した方がいいかも
+        utf8Array = uint8Array
+      }
+      const utf8Blob = new Blob([utf8Array], { type: 'text/csv' })
+
+      // BlobをBase64エンコードして文字列として渡す（google.script.runでBlobデータを丸ごと渡せないっぽい）
+      const readerBase64 = new FileReader()
+      readerBase64.onload = () => {
+        const base64Data = readerBase64.result.split(',')[1]
+        // ファイルアップロード実行
+        google.script.run.withSuccessHandler(handleUploadSuccess).withFailureHandler(handleUploadError).uploadFileBase64(base64Data, file.name)
+      }
+      readerBase64.readAsDataURL(utf8Blob)
+    }
+    reader.readAsArrayBuffer(file)
   }
 }
 

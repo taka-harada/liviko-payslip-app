@@ -392,8 +392,8 @@ const sendPdfViaEmail = (folderId) => {
       sendMail('haradatakayuki7+admin@gmail.com', protectedPdfBlob, false, targetUserInfo)
     } else {
       // MEMO:デバッグコード
-      sendMail('haradatakayuki7+admin@gmail.com', protectedPdfBlob, true, targetUserInfo)
-      // sendMail(`${targetUserInfo.mail}`, protectedPdfBlob, true, targetUserInfo)
+      //sendMail('haradatakayuki7+admin@gmail.com', protectedPdfBlob, true, targetUserInfo)
+      sendMail(`${targetUserInfo.mail}`, protectedPdfBlob, true, targetUserInfo)
     }
   }
 }

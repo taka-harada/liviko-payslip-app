@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
   <head>
-    <title>CSVデータアップロード | Liviko 給与明細生成システム</title>
+    <title>CSVデータアップロード | Liviko 給与明細電子システム</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <link rel="preconnect" href="https://fonts.gstatic.com/" crossorigin="" />
     <link
@@ -11,6 +11,8 @@
       href="https://fonts.googleapis.com/css2?display=swap&amp;family=Manrope%3Awght%40400%3B500%3B700%3B800&amp;family=Noto+Sans%3Awght%40400%3B500%3B700%3B900"
     />
     <link rel="icon" type="image/x-icon" href="data:image/x-icon;base64," />
+    <script src="https://cdn.jsdelivr.net/npm/jschardet@2.1.1/dist/jschardet.min.js"></script>
+    <script src="https://unpkg.com/encoding-japanese@2.2.0/encoding.min.js"></script>
     <!-- MEMO: GASの場合、本番環境ではcss, js拡張子をhtmlとして読み込む必要がある。ローカル開発時は通常通りcss, js拡張子を使う必要があるので以下のコメントを解除して行う -->
     <?!= loadExternalFile('src/css/style'); ?>
     <?!= loadExternalFile('src/scripts/client'); ?>
@@ -277,12 +279,12 @@
               <div class="flex flex-wrap justify-between gap-3 py-4"><p class="text-[#0d151c] tracking-light text-[32px] font-bold leading-tight min-w-72">PDFを書き出す</p></div>
               <!-- <h1 class="text-[#0d151c] tracking-light text-[32px] font-bold leading-tight min-w-72">CSVデータのアップロード</h1> -->
 
-              <h3 class="text-[#0d151c] text-lg font-bold leading-tight tracking-[-0.015em] px-4 pb-2 pt-4">Step 1: CSVファイルを選択</h3>
+              <h3 class="text-[#0d151c] text-lg font-bold leading-tight tracking-[-0.015em] pb-2 pt-4">Step 1: CSVファイルを選択</h3>
               <p class="text-[#0d151c] text-base font-normal leading-normal pb-3 pt-1">
                 「ファイル一覧を取得」をクリックして、GoogleドライブにアップロードしたCSVファイルを選択してください。
               </p>
               <!-- ファイル選択エリア -->
-              <div class="my-4">
+              <div class="my-4 border-b border-gray-300">
                 <div class="flex justify-between">
                   <div id="selectBoxContainer" class="w-full">
                     <button
@@ -298,14 +300,14 @@
                 </div>
               </div>
 
-              <h3 class="text-[#0d151c] text-lg font-bold leading-tight tracking-[-0.015em] px-4 pb-2 pt-4">Step 2: PDFファイルを書き出す</h3>
-              <h4 class="text-sm font-bold px-4 pb-2 pt-4">すぐに書き出す</h4>
+              <h3 class="text-[#0d151c] text-lg font-bold leading-tight tracking-[-0.015em] pb-2 pt-4">Step 2: PDFファイルを書き出す</h3>
+              <h4 class="text-sm font-bold pb-2 pt-4">■すぐに書き出す</h4>
               <p class="text-[#0d151c] text-base font-normal leading-normal pb-3 pt-1">
-                「PDF変換」をクリックすると、従業員の給与情報が反映されたPDFが生成され、それぞれ事前に設定したメールアドレスへファイルが送信されます。
+                「PDF変換」をクリックすると、従業員の給与情報が反映されたPDFが生成され、Googleドライブの所定のフォルダ内（「エクスポート」＞「個別データ」）に保存されます。
               </p>
               <p class="text-sm py-4">※ 変換処理が完了するまで5分〜10分程度かかります。「PDF変換中」の表示ステータスが消えるまでお待ちください。</p>
               <!-- PDF書き出しエリア -->
-              <div class="my-4">
+              <div class="my-4 border-b border-gray-300">
                 <div class="flex flex-col justify-center w-full gap-10">
                   <button
                     type="button"
@@ -381,7 +383,7 @@
             <div id="sendArea" class="tab-content px-4 py-3 hidden">
               <div class="flex flex-wrap justify-between gap-3 py-4"><p class="text-[#0d151c] tracking-light text-[32px] font-bold leading-tight min-w-72">PDFをメールで送る</p></div>
 
-              <h3 class="text-[#0d151c] text-lg font-bold leading-tight tracking-[-0.015em] px-4 pb-2 pt-4">Step 1: PDFフォルダを選択</h3>
+              <h3 class="text-[#0d151c] text-lg font-bold leading-tight tracking-[-0.015em] pb-2 pt-4">Step 1: PDFフォルダを選択</h3>
               <p class="text-[#0d151c] text-base font-normal leading-normal pb-3 pt-1">「フォルダを取得」をクリックすると書き出されたPDFを格納しているフォルダがセレクトボックスから選択できるようになるので、メール送信したいPDFファイルが格納されている対象フォルダを選択してください。</p>
               <!-- ファイル選択エリア -->
               <div class="my-4 border-b border-gray-300">
@@ -484,9 +486,9 @@
                 </div>
               </div>
 
-              <h3 class="text-[#0d151c] text-lg font-bold leading-tight tracking-[-0.015em] px-4 pb-2 pt-4">Step 2: PDFファイルをメールで送る</h3>
+              <h3 class="text-[#0d151c] text-lg font-bold leading-tight tracking-[-0.015em] pb-2 pt-4">Step 2: PDFファイルをメールで送る</h3>
               <p class="text-[#0d151c] text-base font-normal leading-normal pb-3 pt-1">
-                「メール送信」をクリックすると、選択したフォルダ内のPDFファイルがそれぞれ事前に設定したメールアドレスへ送信されます。
+                Step 1で任意のフォルダを選択した状態で、下部の「PDFメール送信」をクリックすると、選択したフォルダ内のPDFファイルがそれぞれ事前に設定したメールアドレスへ送信されます。
               </p>
               <!-- PDF送信エリア -->
               <div class="my-4">

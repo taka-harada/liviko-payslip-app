@@ -3,3 +3,6 @@
 
 # dependancies
 /node_modules
+
+# 不要ファイル
+.DS_Store

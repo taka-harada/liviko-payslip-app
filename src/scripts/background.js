@@ -129,6 +129,27 @@ const uploadFile = (formObj) => {
   }
 }
 
+const uploadFileBase64 = (base64Data, fileName) => {
+  try {
+    // base64データをデコード
+    const decodedBlob = Utilities.newBlob(Utilities.base64Decode(base64Data), 'text/csv', fileName)
+
+    // GoogleDriveの所定フォルダにアップロード
+    const fileUrl = uploadFileToGoogleDrive(decodedBlob)
+
+    const name = decodedBlob.getName()
+    const type = decodedBlob.getContentType()
+    const time = new Date().toLocaleString()
+    const values = [name, type, time, fileUrl]
+    // 指定のスプシに記録
+    addUploadFileInfoToSs(values)
+    return fileUrl
+  } catch (e) {
+    console.log("アップロードエラーが発生しました", e)
+    throw e
+  }
+}
+
 // ファイルをGoogleDriveの「アップロードデータ」フォルダにアップロード、完了後アップロードファイルのURLを返す
 const uploadFileToGoogleDrive = ( file ) => {
   console.log("html側でGoogleDriveへのファイルアップロードが実行された", file)
@@ -371,8 +392,8 @@ const sendPdfViaEmail = (folderId) => {
       sendMail('haradatakayuki7+admin@gmail.com', protectedPdfBlob, false, targetUserInfo)
     } else {
       // MEMO:デバッグコード
-      sendMail('haradatakayuki7+admin@gmail.com', protectedPdfBlob, true, targetUserInfo)
-      // sendMail(`${targetUserInfo.mail}`, protectedPdfBlob, true, targetUserInfo)
+      //sendMail('haradatakayuki7+admin@gmail.com', protectedPdfBlob, true, targetUserInfo)
+      sendMail(`${targetUserInfo.mail}`, protectedPdfBlob, true, targetUserInfo)
     }
   }
 }

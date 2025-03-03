@@ -1,0 +1,23 @@
+{
+  "name": "liviko-payslip-app",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "clasp": "clasp"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/taka-harada/liviko-payslip-app.git"
+  },
+  "keywords": [],
+  "author": "Taka Harada",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/taka-harada/liviko-payslip-app/issues"
+  },
+  "homepage": "https://github.com/taka-harada/liviko-payslip-app#readme",
+  "description": "",
+  "devDependencies": {
+    "@google/clasp": "^2.5.0"
+  }
+}

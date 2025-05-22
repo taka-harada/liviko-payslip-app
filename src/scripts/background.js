@@ -686,7 +686,7 @@ const createPersonalSsFromCsv = (fileId) => {
     insertTransposeDeductionDataRange_A.setNumberFormat("#,##0")
 
     newSheet.getRange(14, 11, transposedDeductionTitle_B.length, transposedDeductionTitle_B[0].length).setValues(transposedDeductionTitle_B)
-    const insertTransposeDeductionDataRange_B = newSheet.getRange(14, 15, userDeductionDataArr_B.length, 1).setValues(userDeductionDataArr_A.map(value => [value]))
+    const insertTransposeDeductionDataRange_B = newSheet.getRange(14, 15, userDeductionDataArr_B.length, 1).setValues(userDeductionDataArr_B.map(value => [value]))
     insertTransposeDeductionDataRange_B.setNumberFormat("#,##0")
 
     newSheet.getRange(19, 11, transposedDeductionTitle_C.length, transposedDeductionTitle_C[0].length).setValues(transposedDeductionTitle_C)

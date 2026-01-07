@@ -236,126 +236,292 @@ const getFilesFromTargetPdfFolder = (targetFolderId) => {
 }
 
 // html側で選択したファイルのIDを元にPDF生成を実行する
+// const convertSpreadSheetToPdf = (uploadedFileId) => {
+
+//   // ユーザーごとのスプシを生成して、[{ name: string, date: string, SsId: string  }] を返す
+//   const personalPaySlipSsDataArr = createPersonalSsFromCsv(uploadedFileId)
+//   console.log("ユーザーごとのスプレッドシートデータが返ってきてるか",personalPaySlipSsDataArr)
+
+//   // 生成したPDFを格納するフォルダ名を日時に指定するので現在の日時と時刻を取得
+//   const now = new Date()
+//   const date = formatDate(now)
+
+//   // PDFを格納するフォルダを "エクスポート/個別データ/PDF"フォルダ内に実行時間のフォルダ名で新規作成
+//   // refector
+//   // const distPdfFolder = DriveApp.getFolderById(DIST_PDF_FOLDER_ID)
+//   // const distPdfChildFolder = distPdfFolder.createFolder(date)
+//   // const distPdfChildFolderId = distPdfChildFolder.getId()
+//   const distPdfFolder = DriveApp.getFolderById(DIST_PDF_FOLDER_ID).createFolder(date)
+//   const distPdfChildFolderId = distPdfFolder.getId()
+
+
+//   // パスワード付与したPDFを格納するフォルダを "エクスポート/個別データ/PDF_パスワード付き"フォルダ内に実行日時&時間のフォルダ名で新規作成
+//   // refector
+//   // const distProtectedPdfFolder = DriveApp.getFolderById(DIST_PROTECTED_PDF_FOLDER_ID) // 「PDF_パスワード付き」フォルダ
+//   // const distProtectedPdfChildFolder = distProtectedPdfFolder.createFolder(date)
+//   // const distProtectedPdfChildFolderId = distProtectedPdfChildFolder.getId()
+//   const distProtectedPdfFolder = DriveApp.getFolderById(DIST_PROTECTED_PDF_FOLDER_ID).createFolder(date) // 「PDF_パスワード付き」フォルダ
+//   const distProtectedPdfChildFolderId = distProtectedPdfFolder.getId()
+
+//   // const distFolder = distProtectedPdfFolder.createFolder(date)
+//   // const distFolderId = distFolder.getId()
+
+//   const recipientInfoSheet = SpreadsheetApp.openById(RECIPIENT_INFO_SS_ID).recipientInfoSs.getActiveSheet()
+//   const recipientInfoArr = recipientInfoSheet.getDataRange().getValues().slice(1)
+//   // 配列->オブジェクト
+//   const recipientInfo = recipientInfoArr.map(item => ({
+//     name: item[0],
+//     mail: item[1],
+//     password: item[2]
+//   }))
+
+//   const spreadsheetCache = {}
+
+//   // ユーザーの数だけループ処理でPDFを生成
+//   Object.keys(personalPaySlipSsDataArr).forEach(key => {
+//     // 配列から個別データを定義
+//     const personalPaySlipSsId = personalPaySlipSsDataArr[key].SsId
+//     if (!spreadsheetCache[personalPaySlipSsId]) {
+//       spreadsheetCache[personalPaySlipSsId] = SpreadsheetApp.openById(personalPaySlipSsId)
+//     }
+
+//     const personalPaySlipSs = spreadsheetCache[personalPaySlipSsId]
+//     const personalPaySlipSheet = personalPaySlipSs.getSheetByName('シート1')
+//     const personalPaySlipSheetId = personalPaySlipSheet.getSheetId() //対象のシートIDを取得
+//     const personalPaySlipSsName = personalPaySlipSsDataArr[key].name //氏名を定義
+//     const documentDate = personalPaySlipSsDataArr[key].date //日付を定義
+
+//     // refactor
+//     // const personalPaySlipSs = SpreadsheetApp.openById(personalPaySlipSsId) //個別の給与明細スプシ
+//     // const personalPaySlipSheet = personalPaySlipSs.getSheetByName('シート1')
+//     // const personalPaySlipSheetId = personalPaySlipSs.getSheetByName('シート1').getSheetId() //対象のシートIDを取得
+//     // const personalPaySlipSsName = personalPaySlipSsDataArr[key].name //氏名を定義
+//     // const documentDate = personalPaySlipSsDataArr[key].date //日付を定義
+
+//     // PDF化の前にflushしてスプシの内容を更新
+//     SpreadsheetApp.flush()
+
+//     // メール送信先情報を定義
+//     // refector
+//     // const recipientInfoSs = SpreadsheetApp.openById(RECIPIENT_INFO_SS_ID)
+//     // const recipientInfoSheet = recipientInfoSs.getActiveSheet()
+//     // const recipientInfoArr = recipientInfoSheet.getRange(2, 2, recipientInfoSheet.getLastRow(), recipientInfoSheet.getLastColumn()).getValues()
+    
+//     // 配列->オブジェクト
+//     // const recipientInfo = recipientInfoArr.map(item => ({
+//     //   name: item[0],
+//     //   mail: item[1],
+//     //   password: item[2]
+//     // }))
+
+//     // MEMO: 一旦ここに記述するが、Util関数として外部化したい（氏名のスペースを削除する）
+//     const normalizeString = (str) => str.replace(/[\s\u3000]+/g, '').trim()
+//     // 「データ送付先情報」スプシの中から対象ユーザーの情報を、給与明細スプシ生成の時に返却された氏名と比較して特定
+//     const targetUserInfo = recipientInfo.find(info => normalizeString(info.name) === normalizeString(personalPaySlipSsName))
+//     console.log("targetUserInfoを出力",targetUserInfo)
+//     console.log("personalPaySlipSsNameの値は？",personalPaySlipSsName, normalizeString(personalPaySlipSsName))
+
+//     // PDF化
+//     try {
+//       // 範囲を指定してPDF化用のURLを生成
+//       const requestUrl = getPdfUrl(personalPaySlipSsId, personalPaySlipSheetId, 'A1', 'AB42', 'A4', true)
+//       const token = ScriptApp.getOAuthToken()
+//       const response = UrlFetchApp.fetch(requestUrl, { headers: {'Authorization': 'Bearer ' + token }})
+
+//       // responseからblobオブジェクトを作成
+//       const blob = response.getBlob()
+//       const fileName = personalPaySlipSsName + '_給与明細_' + documentDate + '.pdf'
+//       blob.setName(fileName.replace(/\s+/g, '')) //間のスペースなども正規表現で削除
+
+//       // Memo: 通常のPDFも実行日時時間でフォルダを作成してそこに格納するようにしたので
+//       // 生成したPDFを格納するフォルダ
+//       //const distPdfFolderId = DIST_PDF_FOLDER_ID
+
+//       // パスワードなしPDF
+//       const generatedPdfFile = DriveApp.getFolderById(distPdfChildFolderId).createFile(blob)
+//       // PDFにdescriptionを設定
+//       generatedPdfFile.setDescription(personalPaySlipSsName)
+
+//       // ファイルを渡して、PDF.coからPre-signed URLとファイル名を取得
+//       const resObj = getPdfCoObj(generatedPdfFile)
+
+//       // CSVの氏名と送信先情報スプレッドシートの氏名がマッチしてtargetUserInfo.passwordが存在すれば、PDFにパスワードセット
+//       let protectedPdfBlob
+//       if(targetUserInfo.password) {
+//         // PDFにパスワードを設定
+//         const oResp = addPasswordToPdf(resObj.url, resObj.fileName, targetUserInfo.password, distProtectedPdfChildFolderId)
+//         protectedPdfBlob = oResp.generatedFile.getBlob()
+//       } else {
+//         // パスワード設定に失敗したログを出す
+//         console.error("targetUserInfoにパスワードが設定されていないので、パスワード化が失敗しました。", targetUserInfo)
+//       }
+
+//       // MEMO: ここで名前とメールアドレスを記載したスプシを呼び出して名前とマッチしたテーブルのメールアドレスを取り出してsendMailする
+//       if (targetUserInfo.mail) {
+//         sendMail('haradatakayuki7+admin@gmail.com', protectedPdfBlob, true, targetUserInfo)
+//         // sendMail(`${targetUserInfo.mail}`, protectedPdfBlob, true, targetUserInfo)
+//       } else {
+//         // 該当するユーザーの送信先情報が登録されていなければ管理者へ送信
+//         sendMail('haradatakayuki7+admin@gmail.com', protectedPdfBlob, false, targetUserInfo)
+//         console.error("「データ送付先情報」スプシの情報は？", recipientInfo)
+//         console.error("生成した個別スプシの名前情報は？", personalPaySlipSsName)
+//         console.error("targetUserInfo.mailがundefinedだったため、メール送信に失敗しました。targetUserInfoを表示します。", targetUserInfo, )
+//       }
+//       //sendMail(`${targetUserInfo.mail}`, protectedPdfBlob, true, targetUserInfo)
+//       //sendMail('haradatakayuki7+admin@gmail.com', protectedPdfBlob, false, targetUserInfo)
+//       // MEMO: ここで名前とメールアドレスを記載したスプシを呼び出して名前とマッチしたテーブルのメールアドレスを取り出してsendMailする
+//       // if(!targetUserInfo) {
+//       //   // 該当するユーザーの送信先情報が登録されていなければ管理者へ送信
+//       //   sendMail('haradatakayuki7+admin@gmail.com', protectedPdfBlob, false, targetUserInfo)
+//       //   console.error("「データ送付先情報」スプシの情報は？", recipientInfo)
+//       //   console.error("生成した個別スプシの名前情報は？", personalPaySlipSsName)
+//       //   console.error("targetUserInfoがundefinedだったため、メール送信に失敗しました。", targetUserInfo, )
+//       // } else {
+//       //   sendMail(`${targetUserInfo.mail}`, protectedPdfBlob, true, targetUserInfo)
+//       // }
+
+//       //Browser.msgBox(`PDFを出力しました`)
+//     } catch(e) {
+//       //Browser.msgBox(`PDF出力に失敗しました\\n${e.message}`)
+//       console.error(`PDF出力に失敗しました\\n${e.message}`)
+//       console.log("PDF出力に失敗しました", personalPaySlipSsDataArr)
+//     }
+//   })
+// }
+
+const BATCH_SIZE = 10
+
+// バッチ処理の開始関数
+//const convertSpreadSheetToPdf = () => {
 const convertSpreadSheetToPdf = (uploadedFileId) => {
+//const startBatchProcessing = (uploadedFileId) => {
+  // 初期化
+  PropertiesService.getScriptProperties().setProperty('uploadedFileId', uploadedFileId)
+  PropertiesService.getScriptProperties().setProperty('currentIndex', 0)
+
+  // 最初のバッチを実行
+  processBatch()
+}
+
+// バッチ処理のメイン関数
+const processBatch = () => {
+  const uploadedFileId = PropertiesService.getScriptProperties().getProperty('uploadedFileId')
+  const currentIndex = parseInt(PropertiesService.getScriptProperties().getProperty('currentIndex'), 10) || 0
 
   // ユーザーごとのスプシを生成して、[{ name: string, date: string, SsId: string  }] を返す
   const personalPaySlipSsDataArr = createPersonalSsFromCsv(uploadedFileId)
   console.log("ユーザーごとのスプレッドシートデータが返ってきてるか",personalPaySlipSsDataArr)
 
+  // メール送信先情報を取得
+  const recipientInfoSheet = SpreadsheetApp.openById(RECIPIENT_INFO_SS_ID).getActiveSheet()
+  const recipientInfoArr = recipientInfoSheet.getRange(2, 2, recipientInfoSheet.getLastRow(), recipientInfoSheet.getLastColumn()).getValues()
+  console.log('ユーザーの情報とれてる？', recipientInfoArr)
+  const recipientInfo = recipientInfoArr.map(item => ({
+    name: item[0],
+    mail:item[1],
+    password: item[2],
+  }))
+  
+  // 氏名の正規化関数
+  const normalizeString = (str) => str.replace(/[\s\u3000]+/g, '').trim()
+
+  // `personalPaySlipSsDataArr` にパスワード情報を追加
+  Object.keys(personalPaySlipSsDataArr).forEach(key => {
+    const userData = personalPaySlipSsDataArr[key]
+
+    const targetUserInfo = recipientInfo.find(info => normalizeString(info.name) === normalizeString(userData.name))
+    if (targetUserInfo) {
+      userData.password = targetUserInfo.password
+    } else {
+      console.warn(`ユーザー ${userData.name} に対応する送信先情報が見つかりませんでした。`)
+    }
+  })
+
   // 生成したPDFを格納するフォルダ名を日時に指定するので現在の日時と時刻を取得
   const now = new Date()
   const date = formatDate(now)
 
-  // PDFを格納するフォルダを "エクスポート/個別データ/PDF"フォルダ内に実行時間のフォルダ名で新規作成
-  const distPdfFolder = DriveApp.getFolderById(DIST_PDF_FOLDER_ID)
-  const distPdfChildFolder = distPdfFolder.createFolder(date)
-  const distPdfChildFolderId = distPdfChildFolder.getId()
+  // フォルダ作成
+  if (currentIndex === 0) {
+    // PDFを格納するフォルダを "エクスポート/個別データ/PDF"フォルダ内に実行時間のフォルダ名で新規作成
+    const distPdfFolder = DriveApp.getFolderById(DIST_PDF_FOLDER_ID).createFolder(date)
+    PropertiesService.getScriptProperties().setProperty('distPdfChildFolderId', distPdfFolder.getId())
+    
+    const distProtectedPdfFolder = DriveApp.getFolderById(DIST_PROTECTED_PDF_FOLDER_ID).createFolder(date)
+    PropertiesService.getScriptProperties().setProperty('distProtectedPdfChildFolderId', distProtectedPdfFolder.getId())
+  }
 
-  // パスワード付与したPDFを格納するフォルダを "エクスポート/個別データ/PDF_パスワード付き"フォルダ内に実行日時&時間のフォルダ名で新規作成
-  const distProtectedPdfFolder = DriveApp.getFolderById(DIST_PROTECTED_PDF_FOLDER_ID) // 「PDF_パスワード付き」フォルダ
-  const distProtectedPdfChildFolder = distProtectedPdfFolder.createFolder(date)
-  const distProtectedPdfChildFolderId = distProtectedPdfChildFolder.getId()
+  const distPdfChildFolderId = PropertiesService.getScriptProperties().getProperty('distPdfChildFolderId')
+  const distProtectedPdfChildFolderId = PropertiesService.getScriptProperties().getProperty('distProtectedPdfChildFolderId')
 
-  // const distFolder = distProtectedPdfFolder.createFolder(date)
-  // const distFolderId = distFolder.getId()
+  // 指定された範囲のユーザーを処理
+  const keys = Object.keys(personalPaySlipSsDataArr)
+  for (let i = currentIndex; i < Math.min(currentIndex + BATCH_SIZE, keys.length); i++) {
+    const key = keys[i]
+    const userData = personalPaySlipSsDataArr[key]
+    processUser(userData, distPdfChildFolderId, distProtectedPdfChildFolderId)
+  }
 
-  // ユーザーの数だけループ処理でPDFを生成
-  Object.keys(personalPaySlipSsDataArr).forEach(key => {
-    // 配列から個別データを定義
-    const personalPaySlipSsId = personalPaySlipSsDataArr[key].SsId
-    const personalPaySlipSs = SpreadsheetApp.openById(personalPaySlipSsId) //個別の給与明細スプシ
+  // 次のバッチをトリガーで実行
+  console.log('currentIndex + BATCH_SIZE と keys.length を比較', currentIndex + BATCH_SIZE,)
+  if (currentIndex + BATCH_SIZE < keys.length) {
+    PropertiesService.getScriptProperties().setProperty('currentIndex', currentIndex + BATCH_SIZE)
+    console.log('1秒後に次のバッチを実行')
+    ScriptApp.newTrigger('processBatch')
+      .timeBased()
+      .after(1000) // 1秒後に次のバッチを実行
+      .create()
+  } else {
+    // すべての処理が完了した場合、トリガーを削除
+    PropertiesService.getScriptProperties().deleteProperty('uploadedFileId')
+    PropertiesService.getScriptProperties().deleteProperty('currentIndex')
+    console.log('すべてのバッチ処理が終了しました')
+  }
+}
+
+// ユーザーごとの処理を関数化
+const processUser = (userData, distPdfChildFolderId, distProtectedPdfChildFolderId) => {
+  try {
+    const personalPaySlipSsId = userData.SsId
+    const personalPaySlipSs = SpreadsheetApp.openById(personalPaySlipSsId)
     const personalPaySlipSheet = personalPaySlipSs.getSheetByName('シート1')
-    const personalPaySlipSheetId = personalPaySlipSs.getSheetByName('シート1').getSheetId() //対象のシートIDを取得
-    const personalPaySlipSsName = personalPaySlipSsDataArr[key].name //氏名を定義
-    const documentDate = personalPaySlipSsDataArr[key].date //日付を定義
+    const personalPaySlipSheetId = personalPaySlipSheet.getSheetId()
+    const personalPaySlipSsName = userData.name
+    const documentDate = userData.date
 
-    // PDF化の前にflushしてスプシの内容を更新
     SpreadsheetApp.flush()
 
-    // メール送信先情報を定義
-    const recipientInfoSs = SpreadsheetApp.openById(RECIPIENT_INFO_SS_ID)
-    const recipientInfoSheet = recipientInfoSs.getActiveSheet()
-    const recipientInfoArr = recipientInfoSheet.getRange(2, 2, recipientInfoSheet.getLastRow(), recipientInfoSheet.getLastColumn()).getValues()
-    // 配列->オブジェクト
-    const recipientInfo = recipientInfoArr.map(item => ({
-      name: item[0],
-      mail: item[1],
-      password: item[2]
-    }))
+    // 範囲を指定してPDF化用のURLを生成
+    const requestUrl = getPdfUrl(personalPaySlipSsId, personalPaySlipSheetId, 'A1', 'AB42', 'A4', true)
+    const token = ScriptApp.getOAuthToken()
+    const response = UrlFetchApp.fetch(requestUrl, { headers: {'Authorization': 'Bearer ' + token }})
 
-    // MEMO: 一旦ここに記述するが、Util関数として外部化したい（氏名のスペースを削除する）
-    const normalizeString = (str) => str.replace(/[\s\u3000]+/g, '').trim()
-    // 「データ送付先情報」スプシの中から対象ユーザーの情報を、給与明細スプシ生成の時に返却された氏名と比較して特定
-    const targetUserInfo = recipientInfo.find(info => normalizeString(info.name) === normalizeString(personalPaySlipSsName))
-    console.log("targetUserInfoを出力",targetUserInfo)
-    console.log("personalPaySlipSsNameの値は？",personalPaySlipSsName, normalizeString(personalPaySlipSsName))
+    // responseからblobオブジェクトを作成
+    const blob = response.getBlob()
+    const fileName = personalPaySlipSsName + '_給与明細_' + documentDate + '.pdf'
+    blob.setName(fileName.replace(/\s+/g, '')) //間のスペースなども正規表現で削除
 
-    // PDF化
-    try {
-      // 範囲を指定してPDF化用のURLを生成
-      const requestUrl = getPdfUrl(personalPaySlipSsId, personalPaySlipSheetId, 'A1', 'AB42', 'A4', true)
-      const token = ScriptApp.getOAuthToken()
-      const response = UrlFetchApp.fetch(requestUrl, { headers: {'Authorization': 'Bearer ' + token }})
+    // パスワードなしPDF
+    const generatedPdfFile = DriveApp.getFolderById(distPdfChildFolderId).createFile(blob)
+    // PDFにdescriptionを設定
+    generatedPdfFile.setDescription(personalPaySlipSsName)
 
-      // responseからblobオブジェクトを作成
-      const blob = response.getBlob()
-      const fileName = personalPaySlipSsName + '_給与明細_' + documentDate + '.pdf'
-      blob.setName(fileName.replace(/\s+/g, '')) //間のスペースなども正規表現で削除
+    // PDFにパスワードをセット。ファイルを渡して、PDF.coからPre-signed URLとファイル名を取得
+    const resObj = getPdfCoObj(generatedPdfFile)
 
-      // Memo: 通常のPDFも実行日時時間でフォルダを作成してそこに格納するようにしたので
-      // 生成したPDFを格納するフォルダ
-      //const distPdfFolderId = DIST_PDF_FOLDER_ID
-
-      // パスワードなしPDF
-      const generatedPdfFile = DriveApp.getFolderById(distPdfChildFolderId).createFile(blob)
-      // PDFにdescriptionを設定
-      generatedPdfFile.setDescription(personalPaySlipSsName)
-
-      // ファイルを渡して、PDF.coからPre-signed URLとファイル名を取得
-      const resObj = getPdfCoObj(generatedPdfFile)
-
-      // CSVの氏名と送信先情報スプレッドシートの氏名がマッチしてtargetUserInfo.passwordが存在すれば、PDFにパスワードセット
-      let protectedPdfBlob
-      if(targetUserInfo.password) {
-        // PDFにパスワードを設定
-        const oResp = addPasswordToPdf(resObj.url, resObj.fileName, targetUserInfo.password, distProtectedPdfChildFolderId)
-        protectedPdfBlob = oResp.generatedFile.getBlob()
-      } else {
-        // パスワード設定に失敗したログを出す
-        console.error("targetUserInfoにパスワードが設定されていないので、パスワード化が失敗しました。", targetUserInfo)
-      }
-
-      // MEMO: ここで名前とメールアドレスを記載したスプシを呼び出して名前とマッチしたテーブルのメールアドレスを取り出してsendMailする
-      if (targetUserInfo.mail) {
-        sendMail('haradatakayuki7+admin@gmail.com', protectedPdfBlob, true, targetUserInfo)
-        // sendMail(`${targetUserInfo.mail}`, protectedPdfBlob, true, targetUserInfo)
-      } else {
-        // 該当するユーザーの送信先情報が登録されていなければ管理者へ送信
-        sendMail('haradatakayuki7+admin@gmail.com', protectedPdfBlob, false, targetUserInfo)
-        console.error("「データ送付先情報」スプシの情報は？", recipientInfo)
-        console.error("生成した個別スプシの名前情報は？", personalPaySlipSsName)
-        console.error("targetUserInfo.mailがundefinedだったため、メール送信に失敗しました。targetUserInfoを表示します。", targetUserInfo, )
-      }
-      //sendMail(`${targetUserInfo.mail}`, protectedPdfBlob, true, targetUserInfo)
-      //sendMail('haradatakayuki7+admin@gmail.com', protectedPdfBlob, false, targetUserInfo)
-      // MEMO: ここで名前とメールアドレスを記載したスプシを呼び出して名前とマッチしたテーブルのメールアドレスを取り出してsendMailする
-      // if(!targetUserInfo) {
-      //   // 該当するユーザーの送信先情報が登録されていなければ管理者へ送信
-      //   sendMail('haradatakayuki7+admin@gmail.com', protectedPdfBlob, false, targetUserInfo)
-      //   console.error("「データ送付先情報」スプシの情報は？", recipientInfo)
-      //   console.error("生成した個別スプシの名前情報は？", personalPaySlipSsName)
-      //   console.error("targetUserInfoがundefinedだったため、メール送信に失敗しました。", targetUserInfo, )
-      // } else {
-      //   sendMail(`${targetUserInfo.mail}`, protectedPdfBlob, true, targetUserInfo)
-      // }
-
-      //Browser.msgBox(`PDFを出力しました`)
-    } catch(e) {
-      //Browser.msgBox(`PDF出力に失敗しました\\n${e.message}`)
-      console.error(`PDF出力に失敗しました\\n${e.message}`)
-      console.log("PDF出力に失敗しました", personalPaySlipSsDataArr)
+    // CSVの氏名と送信先情報スプレッドシートの氏名がマッチしてuserData.passwordが存在すれば、PDFにパスワードセット
+    let protectedPdfBlob
+    if(userData.password) {
+      // PDFにパスワードを設定
+      const oResp = addPasswordToPdf(resObj.url, resObj.fileName, userData.password, distProtectedPdfChildFolderId)
+      protectedPdfBlob = oResp.generatedFile.getBlob()
+    } else {
+      // パスワード設定に失敗したログを出す
+      console.error("userDataにパスワードが設定されていないので、パスワード化が失敗しました。", userData)
     }
-  })
+  } catch(e) {
+    console.error(`ユーザー ${userData.name} の処理中にエラーが発生しました: ${e.message}`)
+  }
 }
 
 // 選択したフォルダ内のファイルをユーザーのリストと照らし合わせてメール送信する
@@ -392,7 +558,7 @@ const sendPdfViaEmail = (folderId) => {
       sendMail('haradatakayuki7+admin@gmail.com', protectedPdfBlob, false, targetUserInfo)
     } else {
       // MEMO:デバッグコード
-      //sendMail('haradatakayuki7+admin@gmail.com', protectedPdfBlob, true, targetUserInfo)
+      // sendMail('haradatakayuki7+admin@gmail.com', protectedPdfBlob, true, targetUserInfo)
       sendMail(`${targetUserInfo.mail}`, protectedPdfBlob, true, targetUserInfo)
     }
   }
@@ -417,8 +583,8 @@ const createPersonalSsFromCsv = (fileId) => {
 
   // CSVの内容をスプシにコピーし、返却されたIDを取得
   const baseSsId = copyDataToSs(fileId)
-  //const baseSsId = "15BBZJsT3QX2gtRykO8QnBmTT0M37NZMbIGFwOAK85IA"
-  //const baseSsId = "13lAnCfVzSTpKhcqnhjH-b36MJkub9djLvfJsef1CTS0" //定額減税あり
+  //const baseSsId = "1TJRGlYD0k0VuoiRMQmroKWNIjpRsit_SQ-rGkc833pc" // MEMO: デバッグ用
+  //const baseSsId = "13lAnCfVzSTpKhcqnhjH-b36MJkub9djLvfJsef1CTS0" // MEMO: デバッグ用（定額減税あり）
 
   // 元データとなるスプシを開く
   const baseSs = SpreadsheetApp.openById(baseSsId)

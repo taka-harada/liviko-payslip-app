@@ -307,6 +307,10 @@ const createFileListDom = (items) => {
 const submitSelectBox = (e) => {
   console.log("submitSelectBox", e.target.id) //convertToPdfだったら、uploadsFilesのセレクトボックスの値を取得
   if(e.target.id === 'convertToPdf') {
+    // ボタンをdisabled
+    const button = document.getElementById('convertToPdf')
+    button.disabled = true
+
     const selectBox = document.getElementById("uploadsFiles")
     const selectedValue = selectBox.value
     console.log("選択された項目", selectedValue)
@@ -326,11 +330,13 @@ const submitSelectBox = (e) => {
       google.script.run
         .withSuccessHandler((res) => {
           loading.classList.add('hidden')
+          button.disabled = false // ボタンを再び有効化
           showToast('toast-success', 'PDF変換が成功しました')
           console.log("サーバーからの応答をログに出力", res)
         })
         .withFailureHandler((res) => {
           loading.classList.add('hidden')
+          button.disabled = false // ボタンを再び有効化
           showToast('toast-danger', 'PDF変換が失敗しました')
           console.log("サーバーからの応答をログに出力（失敗）", res)
         })
@@ -338,9 +344,14 @@ const submitSelectBox = (e) => {
 
     } else {
       console.log("File ID not found in the URL.")
+      button.disabled = false // ボタンを再び有効化
     }
 
   } else if(e.target.id === 'sendPdf') { // 「PDFメール送信」押下。sendPdfだったら、generatedPdfFoldersのセレクトボックスの値を取得
+  // ボタンをdisabled
+    const button = document.getElementById("sendPdf")
+    button.disabled = true
+
     const selectBox = document.getElementById("generatedPdfFolders")
     const selectedValue = selectBox.value
 
@@ -350,9 +361,23 @@ const submitSelectBox = (e) => {
     const folderId = selectedValue.split('/folders/')[1]
     console.log("選択されたフォルダID", folderId)
 
-    google.script.run.sendPdfViaEmail(folderId)
+    google.script.run
+      .withSuccessHandler((res) => {
+        loading.classList.add('hidden')
+        button.disabled = false // ボタンを再び有効化
+        showToast('toast-success', 'PDF送信が成功しました')
+        console.log("サーバーからの応答をログに出力", res)
+      })
+      .withFailureHandler((res) => {
+        loading.classList.add('hidden')
+        button.disabled = false // ボタンを再び有効化
+        showToast('toast-danger', 'PDF送信が失敗しました')
+        console.log("サーバーからの応答をログに出力（失敗）", res)
+      })      
+      .sendPdfViaEmail(folderId)
   } else {
     console.log("すべて失敗")
+    button.disabled = false // ボタンを再び有効化
   }
 }
 
